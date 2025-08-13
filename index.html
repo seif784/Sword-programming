@@ -3,7 +3,8 @@
     <head>
     <meta charset="UTF-8">
 
-    <title>صفحة IT</title>
+    <title id="pageTitle"></title>
+    <link rel="icon" type="image/png" id="dynamicFavicon" href="default-icon.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">  
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -11,7 +12,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
        <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, push, set, update, get , query, orderByChild, equalTo , runTransaction, remove , onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
@@ -509,7 +514,7 @@ window.searchData = async function () {
 };
 
 const allColumns = {
-    companyCode: "PC Number",
+    companyCode: "company",
     pcNum: "PC Number",
     deviceType: "Device Type",
     deviceModel: "Device Model",
@@ -552,7 +557,7 @@ const allColumns = {
     snSYSAPPS: "S/N System Apps",
     note: "Note"
 
-};
+  };
 window.applyColumnFilter = function() {
     selectedColumns = Array.from(document.querySelectorAll('.columnCheckbox:checked')).map(cb => cb.value);
     document.getElementById("columnFilterBox").style.display = "none";
@@ -1657,7 +1662,6 @@ function fetchScreenData() {
           document.getElementById("documentNumberScreen").setAttribute("data-id", found.id);
           document.getElementById("documentNumberScreen").setAttribute("readonly", true);
 
-  // ✅ إظهار الشركة
   if (found.company) {
     const screenCompanySelect = document.getElementById("screenCompanySelect");
     const companyCode = found.company.code || "";
@@ -1905,9 +1909,7 @@ function fetchMaintenanceData() {
                 document.getElementById("editFixDetails2").value = found.fixDetails || "";
                 document.getElementById("editFixDate2").value = found.repairDate || "";
                 document.getElementById("status2").value = found.status || "";
-
                 document.getElementById("editDocumentNumber").setAttribute("data-id", maintenanceId);
-
                 const deleteBtn = document.getElementById("deleteButton");
                 deleteBtn.style.display = "inline-block";
                 deleteBtn.setAttribute("data-id", found.id);
@@ -2807,7 +2809,7 @@ document.getElementById('itemNameOrder').addEventListener('input', function () {
 
     options.forEach(option => {
         if (option.value === selectedName) {
-            document.getElementById('itemCodeOrder').value = option.dataset.code;
+          document.getElementById('itemCodeOrder').value = option.dataset.code;
         }
     });
 });
@@ -3500,14 +3502,14 @@ window.addItemToPurchase2 = function () {
 
 
 window.searchDataOrder = async function () {
-  const queryDate          = document.getElementById("queryDate").value.trim();
-  const queryDocNum        = document.getElementById("queryDocNum").value.trim();
-  const queryLocation      = document.getElementById("queryLocation").value.trim();
-  const generalSearch      = document.getElementById("generalSearchOrder").value.trim().toLowerCase();
-  const queryItme          = document.getElementById("queryItme").value.trim().toLowerCase();
-  const filterItemCode     = document.getElementById("filterItemOrder").value.trim();
-  const filterSupplierId   = document.getElementById("filterSupplierOrder").value.trim();
-  const queryCompanyName   = document.getElementById("queryCompanySelectOrder").value.trim().toLowerCase();
+  const queryDate = document.getElementById("queryDate").value.trim();
+  const queryDocNum = document.getElementById("queryDocNum").value.trim();
+  const queryLocation = document.getElementById("queryLocation").value.trim();
+  const generalSearch = document.getElementById("generalSearchOrder").value.trim().toLowerCase();
+  const queryItme = document.getElementById("queryItme").value.trim().toLowerCase();
+  const filterItemCode  = document.getElementById("filterItemOrder").value.trim();
+  const filterSupplierId = document.getElementById("filterSupplierOrder").value.trim();
+  const queryCompanyName = document.getElementById("queryCompanySelectOrder").value.trim().toLowerCase();
 
   const queryResultsOrder  = document.getElementById("queryResultsOrder");
   queryResultsOrder.innerHTML = "⌛ جاري البحث...";
@@ -3535,32 +3537,17 @@ window.searchDataOrder = async function () {
         &&
         (filterSupplierId === "" || (order.supplierCodeOrder && order.supplierCodeOrder === filterSupplierId))
         &&
-        (
-          queryItme === "" ||
-          (order.items && order.items.some(item =>
-            item.itemName && item.itemName.toLowerCase().includes(queryItme)
-          ))
-        )
+        (queryItme === "" ||(order.items && order.items.some(item => item.itemName && item.itemName.toLowerCase().includes(queryItme))))
         &&
-        (
-          filterItemCode === "" ||
-          (order.items && order.items.some(item =>
-            item.itemCode && item.itemCode === filterItemCode
-          ))
-        )
+        (filterItemCode === "" ||(order.items && order.items.some(item =>item.itemCode && item.itemCode === filterItemCode)))
         &&
-        (
-          queryCompanyName === "" ||
-          (order.company && order.company.name.toLowerCase().includes(queryCompanyName))
-        )
+        (queryCompanyName === "" ||(order.company && order.company.name.toLowerCase().includes(queryCompanyName)))
       );
     });
 
     if (generalSearch) {
       filteredOrders = filteredOrders.filter(order =>
-        Object.values(order).some(val =>
-          String(val).toLowerCase().includes(generalSearch)
-        )
+        Object.values(order).some(val => String(val).toLowerCase().includes(generalSearch))
       );
     }
 
@@ -3667,8 +3654,7 @@ window.searchDataOrder = async function () {
 window.showOrderInvoice = function (tdElement) {
   try {
     const rawData = tdElement
-      .getAttribute("data-order")
-      .replace(/&apos;/g, "'");
+    .getAttribute("data-order").replace(/&apos;/g, "'");
     const order = JSON.parse(rawData);
     const invoiceData = {
       siteLocation: order.locationPurchase || '',
@@ -3701,7 +3687,7 @@ async function loadItemsToSelect() {
     try {
         const snapshot = await get(itemsRef);
         const select = document.getElementById('filterItemOrder');
-        select.innerHTML = '<option value="">- اختر الصنف -</option>'; // إعادة التهيئة
+        select.innerHTML = '<option value="">- اختر الصنف -</option>'; 
 
         if (snapshot.exists()) {
             const items = snapshot.val();
@@ -3816,7 +3802,7 @@ window.showInvoice = async function (orderData) {
           
           <!-- العلامة المائية -->
           <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-50deg);
-                      opacity:0.05;font-size:100px;font-weight:bold;color:#000;white-space:nowrap;">
+            opacity:0.05;font-size:100px;font-weight:bold;color:#000;white-space:nowrap;">
             ${settings.watermark}
           </div>
 
@@ -3911,7 +3897,6 @@ window.showInvoice = async function (orderData) {
           </div>
         </div>
       `;
-
       const w = window.open("", "_blank");
       w.document.write(template);
       w.document.close();
@@ -4049,7 +4034,6 @@ window.showInvoice2 = async function (orderData) {
     alert('❌ فشل في تحميل بيانات الشركة.');
   }
 };
-
 
 //////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////// موفقه التسليم ////////////////////////////////////////////
@@ -4466,7 +4450,7 @@ window.postToDisbursement = async function () {
                     const { itemCode, price = 0, quantity = 0 } = item;
 
                     if (!lastPrices[itemCode] || docNumber > lastPrices[itemCode].docNumber) {
-                        lastPrices[itemCode] = { price: parseFloat(price), docNumber };
+                      lastPrices[itemCode] = { price: parseFloat(price), docNumber };
                     }
 
                     stock[itemCode] = (stock[itemCode] || 0) + parseFloat(quantity);
@@ -4715,16 +4699,8 @@ window.searchDatadelivery = async function () {
                 (queryDocNum === "" || (delivery.documentNumberDelivery && delivery.documentNumberDelivery.toString().includes(queryDocNum))) &&
                 (queryDate === "" || (delivery.approvalDate && delivery.approvalDate === queryDate)) &&
                 (queryLocation === "" || (delivery.location && delivery.location.includes(queryLocation))) &&
-                (
-                    filterItemCode === "" ||
-                    (delivery.items && delivery.items.some(item =>
-                        item.itemCode && item.itemCode === filterItemCode
-                    ))
-                ) &&
-                (
-                    queryCompanyName === "" ||
-                    (delivery.company && delivery.company.name && delivery.company.name.toLowerCase().includes(queryCompanyName))
-                )
+                (filterItemCode === "" ||(delivery.items && delivery.items.some(item => item.itemCode && item.itemCode === filterItemCode))) && 
+                (queryCompanyName === "" ||(delivery.company && delivery.company.name && delivery.company.name.toLowerCase().includes(queryCompanyName)))
             );
         });
 
@@ -4824,7 +4800,7 @@ async function loadItemsToSelectDelivery() {
     try {
         const snapshot = await get(itemsRef);
         const select = document.getElementById('filterItemDelivery');
-        select.innerHTML = '<option value="">- اختر الصنف -</option>'; // إعادة التهيئة
+        select.innerHTML = '<option value="">- اختر الصنف -</option>'; 
 
         if (snapshot.exists()) {
             const items = snapshot.val();
@@ -12608,7 +12584,7 @@ window.updateCompanySettings = async function () {
 
     const settingsRef = ref(database, 'companySettings/' + code);
     await set(settingsRef, settings);
-
+ 
     alert('✅ تم حفظ إعدادات الشركة بنجاح');
 
     document.getElementById('inputCompanyAddress').value = '';
@@ -13304,7 +13280,6 @@ window.searchCamera = function () {
             );
         }
 
-        // ✅ الترتيب حسب رقم المستند
         filteredData.sort((a, b) => (parseInt(a.documentNumberCamera) || 0) - (parseInt(b.documentNumberCamera) || 0));
 
         if (filteredData.length === 0) {
@@ -13429,11 +13404,109 @@ window.exportToExcelCamera = function () {
 };
 
 ///////////////////////////////////////////////////////////////////
+/////////////////////////// اعدادات الصفحه///////////////////////
+ window.addEventListener('DOMContentLoaded', () => {
+
+  // 1. أظهر الإعدادات بسرعة من LocalStorage (قبل Firebase)
+  loadPageSettingsFromLocal();
+
+  // 2. بعد ذلك اقرأ من Firebase
+  loadPageSettings();
+
+  // 3. تغيير الشعار عند اختيار صورة
+  document.getElementById('logoFile').addEventListener('change', function (e) {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function (event) {
+        const logo = event.target.result;
+        const preview = document.getElementById('logoPreview');
+        preview.src = logo;
+        preview.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  // 4. عند الضغط على زر الحفظ
+  document.getElementById('saveButton').addEventListener('click', savePageSettings);
+
+  // 5. دالة الحفظ
+  async function savePageSettings() {
+    const pageName = document.getElementById('pageName').value.trim();
+    const logoUrl = document.getElementById('logoPreview').src;
+
+    if (!pageName || !logoUrl || logoUrl === window.location.href) {
+      alert("❗ من فضلك أدخل اسم الصفحة وارفع شعار");
+      return;
+    }
+
+    const settings = { pageName, logoUrl };
+
+    try {
+      // حفظ في Firebase
+      await set(ref(database, 'pageSettings'), settings);
+      // حفظ محلي
+      localStorage.setItem('pageSettings', JSON.stringify(settings));
+      alert("✅ تم حفظ الإعدادات بنجاح");
+      applyPageSettings(settings);
+    } catch (error) {
+      console.error("❌ فشل الحفظ:", error);
+    }
+  }
+
+  // 6. دالة التحميل من Firebase
+  async function loadPageSettings() {
+    try {
+      const snapshot = await get(ref(database, 'pageSettings'));
+      if (snapshot.exists()) {
+        const settings = snapshot.val();
+        document.getElementById('pageName').value = settings.pageName;
+        document.getElementById('logoPreview').src = settings.logoUrl;
+        document.getElementById('logoPreview').style.display = 'block';
+        applyPageSettings(settings);
+        // تحديث LocalStorage من Firebase
+        localStorage.setItem('pageSettings', JSON.stringify(settings));
+      }
+    } catch (error) {
+      console.error("❌ فشل تحميل الإعدادات:", error);
+    }
+  }
+
+  // 7. دالة التحميل من LocalStorage
+  function loadPageSettingsFromLocal() {
+    const data = localStorage.getItem('pageSettings');
+    if (data) {
+      const settings = JSON.parse(data);
+      document.getElementById('pageName').value = settings.pageName;
+      document.getElementById('logoPreview').src = settings.logoUrl;
+      document.getElementById('logoPreview').style.display = 'block';
+      applyPageSettings(settings);
+    }
+  }
+
+  // 8. تطبيق الإعدادات على الصفحة
+  function applyPageSettings(settings) {
+    document.title = settings.pageName;
+    document.getElementById('pageTitle').textContent = settings.pageName;
+
+    let favicon = document.getElementById('dynamicFavicon');
+    if (!favicon) {
+      favicon = document.createElement('link');
+      favicon.rel = 'icon';
+      favicon.id = 'dynamicFavicon';
+      document.head.appendChild(favicon);
+    }
+    favicon.href = settings.logoUrl;
+  }
+});
+
+
 </script>
 </head>
 <style>
 :root {
-    --main-color: #ffffffcc; /* شفافية خفيفة */
+    --main-color: #ffffffcc; 
     --hover-color: #f1f1f1cc;
     --light-bg: #ffffff1a;
     --box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
@@ -13904,24 +13977,23 @@ table thead {
     </div>
     <div class="header d-flex align-items-center p-3 bg-light border-bottom">        
         <div class="d-flex align-items-center">
-           <button class="btn btn-outline-secondary btn-sm me-2" onclick="toggleLanguage()">🌐 English / عربي</button>
-           <button class="btn btn-outline-secondary btn-sm" onclick="logout()">🔓 تسجيل الخروج</button>
+          <div class="user-info d-flex align-items-center me-3">
+            <img id="userAvatar" src="default-avatar.png" alt="User Avatar" class="rounded-circle me-2" style="width: 40px; height: 40px;">
+            <span id="userDisplayName" class="fw-bold me-4">اسم المستخدم</span>
+          </div>
+          <button class="btn btn-outline-secondary btn-sm me-2" onclick="toggleLanguage()">🌐 English / عربي</button>
+          <button class="btn btn-outline-secondary btn-sm" onclick="logout()">🔓 تسجيل الخروج</button>
         </div>
-        <input type="text" placeholder="🔍 بحث..." class="form-control mx-3 w-50">
         <div class="d-flex align-items-center">
-           <button class="btn btn-outline-secondary btn-sm me-3" onclick="fetchData()">🔄 تحديث</button>
-           <button class="btn btn-outline-secondary btn-sm me-2" id="deleteButton" onclick="deleteDocument()">🗑️ حذف</button>
+          <button class="btn btn-outline-secondary btn-sm me-3" onclick="fetchData()">🔄 تحديث</button>
+          <button class="btn btn-outline-secondary btn-sm me-2" id="deleteButton" onclick="deleteDocument()">🗑️ حذف</button>
+          <button class="btn btn-outline-secondary btn-sm me-2" id="deleteButton" onclick="HomeDocument()">🏠 الرئيسية</button>
         </div>
+
     </div>
 
     <div class="sidebar p-3 bg-body-tertiary" id="sidebar">
-      <div class="user-info d-flex align-items-center me-3">
-        <img id="userAvatar" src="default-avatar.png" alt="User Avatar" class="rounded-circle me-2" style="width: 40px; height: 40px;">
-        <span id="userDisplayName" class="fw-bold me-4">اسم المستخدم</span>
-      </div>
-
-      <hr>
-        <div class="card mb-3">
+      <div class="card mb-3">
             <button class="btn btn-info w-100 text-start" data-bs-toggle="collapse" data-bs-target="#computerDropdown">
                 💻 <span class="button-text">خيارات الكمبيوتر</span>
             </button>
@@ -14111,6 +14183,7 @@ table thead {
             <div id="settingsDropdown" class="collapse ">
                 <div class="card-body">
                     <ul class="nav nav-pills flex-column">
+                        <li><a class="nav-link" href="#PageSettings" onclick="showSection('PageSettings')">   إعدادات الصفحة </a></li>
                         <li><a class="nav-link" href="#definitionCompanies" onclick="showSection('definitionCompanies')">  تعريف الشريكات  </a></li>
                         <li><a class="nav-link" href="#companySettingsForm" onclick="showSection('companySettingsForm')">اعدادت الفاتوره </a></li>
                         <li><a class="nav-link" href="#addItemForm" onclick="showSection('addItemForm')">إضافة صنف</a></li>
@@ -14140,6 +14213,26 @@ table thead {
         </div>
     </div>
 </body>
+
+<div id="PageSettings" class="content">
+  <div class="card">
+    <div class="card-header text-center">إعدادات الصفحة</div>
+    <div class="grid-container p-3">
+      <div class="grid-item mb-3">
+        <label>اسم الصفحة:</label>
+        <input type="text" id="pageName" class="form-control">
+      </div>
+
+      <div class="grid-item mb-3">
+        <label>شعار الصفحة (لوجو):</label>
+        <input type="file" id="logoFile" class="form-control">
+        <img id="logoPreview" src="" alt="شعار" width="100" style="display:none; margin-top: 10px;">
+      </div>
+
+      <button id="saveButton" class="btn btn-success">💾 حفظ الإعدادات</button>
+    </div>
+  </div>
+</div>
 
 <div id="computerForm" class="content" style="display: none;">
     <div class="card">
@@ -17526,9 +17619,6 @@ function showSection(sectionId) {
     }
 
   }, 1000);
-}
-function goHome() {
-  window.location.href = "itseif.html"; // غيّر المسار حسب الصفحة الرئيسية الحقيقية
 }
 
 // ============ عرض الأقسام الفرعية ============
