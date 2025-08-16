@@ -17,6 +17,8 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
        <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, push, set, update, get , query, orderByChild, equalTo , runTransaction, remove , onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
@@ -13405,15 +13407,12 @@ window.exportToExcelCamera = function () {
 
 ///////////////////////////////////////////////////////////////////
 /////////////////////////// اعدادات الصفحه///////////////////////
- window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', () => {
 
-  // 1. أظهر الإعدادات بسرعة من LocalStorage (قبل Firebase)
   loadPageSettingsFromLocal();
 
-  // 2. بعد ذلك اقرأ من Firebase
   loadPageSettings();
 
-  // 3. تغيير الشعار عند اختيار صورة
   document.getElementById('logoFile').addEventListener('change', function (e) {
     const file = e.target.files[0];
     if (file) {
@@ -13428,10 +13427,8 @@ window.exportToExcelCamera = function () {
     }
   });
 
-  // 4. عند الضغط على زر الحفظ
   document.getElementById('saveButton').addEventListener('click', savePageSettings);
 
-  // 5. دالة الحفظ
   async function savePageSettings() {
     const pageName = document.getElementById('pageName').value.trim();
     const logoUrl = document.getElementById('logoPreview').src;
@@ -13444,9 +13441,7 @@ window.exportToExcelCamera = function () {
     const settings = { pageName, logoUrl };
 
     try {
-      // حفظ في Firebase
       await set(ref(database, 'pageSettings'), settings);
-      // حفظ محلي
       localStorage.setItem('pageSettings', JSON.stringify(settings));
       alert("✅ تم حفظ الإعدادات بنجاح");
       applyPageSettings(settings);
@@ -13455,7 +13450,6 @@ window.exportToExcelCamera = function () {
     }
   }
 
-  // 6. دالة التحميل من Firebase
   async function loadPageSettings() {
     try {
       const snapshot = await get(ref(database, 'pageSettings'));
@@ -13465,7 +13459,6 @@ window.exportToExcelCamera = function () {
         document.getElementById('logoPreview').src = settings.logoUrl;
         document.getElementById('logoPreview').style.display = 'block';
         applyPageSettings(settings);
-        // تحديث LocalStorage من Firebase
         localStorage.setItem('pageSettings', JSON.stringify(settings));
       }
     } catch (error) {
@@ -13473,7 +13466,6 @@ window.exportToExcelCamera = function () {
     }
   }
 
-  // 7. دالة التحميل من LocalStorage
   function loadPageSettingsFromLocal() {
     const data = localStorage.getItem('pageSettings');
     if (data) {
@@ -13485,7 +13477,6 @@ window.exportToExcelCamera = function () {
     }
   }
 
-  // 8. تطبيق الإعدادات على الصفحة
   function applyPageSettings(settings) {
     document.title = settings.pageName;
     document.getElementById('pageTitle').textContent = settings.pageName;
@@ -13500,7 +13491,280 @@ window.exportToExcelCamera = function () {
     favicon.href = settings.logoUrl;
   }
 });
+/////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////// Dashboard /////////////////////////////////////////////////////
+const ctx = document.getElementById("combinedChart").getContext("2d");
+const combinedChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: [],
+        datasets: [
+            {
+                label: 'عدد الخطوط',
+                data: [],
+                backgroundColor: 'rgba(54, 162, 235, 0.7)' // أزرق واضح
+            },
+            {
+                label: 'عدد الهواتف',
+                data: [],
+                backgroundColor: 'rgba(255, 99, 132, 0.7)' // أحمر وردي
+            },
+            {
+                label: 'عدد الشاشات',
+                data: [],
+                backgroundColor: 'rgba(255, 206, 86, 0.7)' // أصفر ذهبي
+            },
+            {
+                label: 'عدد الكمبيوتر',
+                data: [],
+                backgroundColor: 'rgba(75, 192, 192, 0.7)' // فيروزي
+            },
+            {
+                label: 'عددالكاميرات',
+                data: [],
+                backgroundColor: 'rgba(153, 102, 255, 0.7)'
+            },
+           {
+                label: 'عدد الرواتر',
+                data: [],
+                backgroundColor: 'rgba(255, 159, 64, 0.7)' 
+            },
+            {
+                label: 'عدد طبعات',
+                data: [],
+                backgroundColor: 'rgba(0, 204, 102, 0.7)' 
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { position: 'top' }
+        },
+        scales: {
+            y: { beginAtZero: true }
+        }
+    }
+});
 
+let linesCount = {};
+let phonesCount = {};
+let screensCount = {};
+let computersCount = {};
+let camerasCount = {};
+let routersCount = {};
+let printersCount = {};
+function updateChart() {
+    let allEmployees = new Set([
+        ...Object.keys(linesCount),
+        ...Object.keys(phonesCount),
+        ...Object.keys(screensCount),
+        ...Object.keys(computersCount),
+        ...Object.keys(camerasCount),
+        ...Object.keys(routersCount),
+        ...Object.keys(printersCount)
+    ]);
+
+    combinedChart.data.labels = Array.from(allEmployees);
+    combinedChart.data.datasets[0].data = combinedChart.data.labels.map(name => linesCount[name] || 0);
+    combinedChart.data.datasets[1].data = combinedChart.data.labels.map(name => phonesCount[name] || 0);
+    combinedChart.data.datasets[2].data = combinedChart.data.labels.map(name => screensCount[name] || 0);
+    combinedChart.data.datasets[3].data = combinedChart.data.labels.map(name => computersCount[name] || 0);
+    combinedChart.data.datasets[4].data = combinedChart.data.labels.map(name => camerasCount[name] || 0);
+    combinedChart.data.datasets[5].data = combinedChart.data.labels.map(name => routersCount[name] || 0);
+    combinedChart.data.datasets[6].data = combinedChart.data.labels.map(name => printersCount[name] || 0);
+    combinedChart.update();
+}
+
+
+onValue(ref(database, "lines"), (snapshot) => {
+    linesCount = {};
+    snapshot.forEach((child) => {
+        const emp = child.val().location || "غير محدد";
+        linesCount[emp] = (linesCount[emp] || 0) + 1;
+    });
+    updateChart();
+});
+
+onValue(ref(database, "phones"), (snapshot) => {
+    phonesCount = {};
+    snapshot.forEach((child) => {
+        const emp = child.val().locationPhone || "غير محدد";
+        phonesCount[emp] = (phonesCount[emp] || 0) + 1;
+    });
+    updateChart();
+});
+
+onValue(ref(database, "screens"), (snapshot) => {
+    screensCount = {};
+    snapshot.forEach((child) => {
+        const emp = child.val().screenLocation || "غير محدد";
+        screensCount[emp] = (screensCount[emp] || 0) + 1;
+    });
+    updateChart();
+});
+onValue(ref(database, "computers"), (snapshot) => {
+    computersCount = {};
+    snapshot.forEach((child) => {
+        const emp = child.val().pcLocation || "غير محدد";
+        computersCount[emp] = (computersCount[emp] || 0) + 1;
+    });
+    updateChart();
+});
+onValue(ref(database, "cameras"), (snapshot) => {
+    camerasCount = {};
+    snapshot.forEach((child) => {
+        const emp = child.val().cameraLocation || "غير محدد";
+        camerasCount[emp] = (camerasCount[emp] || 0) + 1;
+    });
+    updateChart();
+});
+onValue(ref(database, "routers"), (snapshot) => {
+    routersCount = {};
+    snapshot.forEach((child) => {
+        const emp = child.val().location || "غير محدد";
+        routersCount[emp] = (routersCount[emp] || 0) + 1;
+    });
+    updateChart();
+});
+onValue(ref(database, "printers"), (snapshot) => {
+    printersCount = {};
+    snapshot.forEach((child) => {
+        const emp = child.val().location || "غير محدد";
+        printersCount[emp] = (printersCount[emp] || 0) + 1;
+    });
+    updateChart();
+});
+/////////////////////////////////////////////////////////////////////////////
+////////////////////////////////// dashbord /////////////////////////////////
+
+async function loadDashboardData() {
+    let locationPurchase = {};
+    let locationDelivery = {};
+    let itemsPurchase = {};
+    let itemsDelivery = {};
+
+    try {
+        const purchaseSnap = await get(ref(database, 'purchaseOrders'));
+        if (purchaseSnap.exists()) {
+            Object.values(purchaseSnap.val()).forEach(order => {
+                const loc = order.locationPurchase || "غير محدد";
+                locationPurchase[loc] = (locationPurchase[loc] || 0) + order.items.length;
+                order.items.forEach(item => {
+                    const name = item.itemName || "غير محدد";
+                    itemsPurchase[name] = (itemsPurchase[name] || 0) + Number(item.itemQuantity || 0);
+                });
+            });
+        }
+
+        const deliverySnap = await get(ref(database, 'deliveryRequests'));
+        if (deliverySnap.exists()) {
+            Object.values(deliverySnap.val()).forEach(order => {
+                const loc = order.location || "غير محدد";
+                locationDelivery[loc] = (locationDelivery[loc] || 0) + order.items.length;
+                order.items.forEach(item => {
+                    const name = item.itemName || "غير محدد";
+                    itemsDelivery[name] = (itemsDelivery[name] || 0) + Number(item.quantity || 0);
+                });
+            });
+        }
+
+        renderCharts(locationPurchase, locationDelivery, itemsPurchase, itemsDelivery);
+
+    } catch (err) {
+        console.error("❌ خطأ في تحميل البيانات:", err);
+    }
+}
+
+function renderCharts(locPurchase, locDelivery, itemsPurchase, itemsDelivery) {
+    const allLocations = [...new Set([...Object.keys(locPurchase), ...Object.keys(locDelivery)])];
+    const allItems = [...new Set([...Object.keys(itemsPurchase), ...Object.keys(itemsDelivery)])];
+
+    new Chart(document.getElementById("locationChart"), {
+        type: 'bar',
+        data: {
+            labels: allLocations,
+            datasets: [
+                {
+                    label: 'مشتريات',
+                    data: allLocations.map(l => locPurchase[l] || 0),
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)'
+                },
+                {
+                    label: 'تسليم',
+                    data: allLocations.map(l => locDelivery[l] || 0),
+                    backgroundColor: 'rgba(255, 99, 132, 0.7)'
+                }
+            ]
+        },
+        options: { responsive: true }
+    });
+
+    new Chart(document.getElementById("itemChart"), {
+        type: 'pie',
+        data: {
+            labels: allItems,
+            datasets: [{
+                label: 'إجمالي الكميات',
+                data: allItems.map(i => (itemsPurchase[i] || 0) + (itemsDelivery[i] || 0)),
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.7)',
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(255, 206, 86, 0.7)',
+                    'rgba(75, 192, 192, 0.7)',
+                    'rgba(153, 102, 255, 0.7)',
+                    'rgba(255, 159, 64, 0.7)',
+                    'rgba(0, 204, 102, 0.7)'
+                ]
+            }]
+        },
+        options: { responsive: true }
+    });
+}
+
+document.addEventListener("DOMContentLoaded", loadDashboardData);
+
+/////////////////////////////////////////////////////////////////////////////
+///////////////////////// تغير كلمه المرور ////////////////////////////////
+window.changePassword = async function () {
+  const username = localStorage.getItem('username');
+  if (!username) {
+    alert("❌ لم يتم العثور على مستخدم مسجل دخول.");
+    return;
+  }
+
+  const newPassword = prompt(" أدخل كلمة المرور الجديدة:");
+  if (!newPassword || newPassword.trim() === "") {
+    alert("❌ كلمة المرور لا يمكن أن تكون فارغة.");
+    return;
+  }
+
+  const snapshot = await get(ref(database, 'users'));
+  if (snapshot.exists()) {
+    const users = snapshot.val();
+    let userId = null;
+
+    for (const key in users) {
+      if (users[key].username === username) {
+        userId = key;
+        break;
+      }
+    }
+
+    if (!userId) {
+      alert("❌ حدث خطأ: لم يتم العثور على المستخدم.");
+      return;
+    }
+
+    await update(ref(database, `users/${userId}`), { password: newPassword });
+
+    alert("✅ تم تغيير كلمة المرور بنجاح.");
+  } else {
+    alert("❌ لا يوجد مستخدمين في قاعدة البيانات.");
+  }
+};
+
+///////////////////////////////////////////////////////////////////////////////////////
 
 </script>
 </head>
@@ -13744,36 +14008,35 @@ button:hover {
     background-color: var(--hover-color);
 }
 
+#columnFilterBox {
+  max-height: 400px;
+  max-width: 300px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid #ccc;
+  background-color: #f9f9f9;
+  padding: 15px;
+  margin: 10px 0;
+  position: absolute;
+  right: 10px;
+  z-index: 100;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
 
-        #columnFilterBox {
-            max-height: 400px;
-            max-width: 300px;
-            overflow-y: auto;
-            overflow-x: hidden;
-            border: 1px solid #ccc;
-            background-color: #f9f9f9;
-            padding: 15px;
-            margin: 10px 0;
-            position: absolute;
-            right: 10px;
-            z-index: 100;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
+#columnFilterBox label {
+  display: block;
+  margin: 5px 0;
+}
 
-        #columnFilterBox label {
-            display: block;
-            margin: 5px 0;
-        }
-
-        #columnFilterBox button {
-            margin-top: 10px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            cursor: pointer;
-            border-radius: 4px;
-        }
+#columnFilterBox button {
+  margin-top: 10px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+}
 
 #computerDetails,
 #LaptopDetails {
@@ -13833,7 +14096,6 @@ table thead {
     z-index: 1;
     font-weight: bold;
 }
-
 
 #columnFilterBox {
     max-height: 400px;
@@ -13965,6 +14227,55 @@ table thead {
     font-weight: bold;
 }
 
+/* ====== العنوان الرئيسي للدashboard ====== */
+.dashboard-header {
+  text-align: center;
+  margin-bottom: 30px;
+  padding: 15px;
+  background: linear-gradient(135deg, #007bff00, #0057b300);
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0);
+}
+
+.dashboard-header h2 {
+  margin: 0;
+  color: #ffffff00;
+  font-weight: 800;
+  font-size: 26px;
+  letter-spacing: 1px;
+}
+
+.dashboard-header p {
+  color: rgba(255, 255, 255, 0);
+  font-size: 15px;
+}
+
+/* ===== توزيع الكروت ===== */
+.chart-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0px, 3fr));
+  gap: 20px;
+}
+.chart-card {
+  background: var(--main-color);
+  border-radius: var(--radius);
+  box-shadow: var(--box-shadow);
+  padding: 20px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.chart-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+/* ===== أنيميشن دخول الكروت ===== */
+.chart-card {
+  animation: fadeUp 0.6s ease both;
+}
+
+@keyframes fadeUp {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
 
 </style>
 </head>
@@ -13975,22 +14286,32 @@ table thead {
             <span class="visually-hidden">جاري التحميل...</span>
         </div>
     </div>
-    <div class="header d-flex align-items-center p-3 bg-light border-bottom">        
-        <div class="d-flex align-items-center">
-          <div class="user-info d-flex align-items-center me-3">
-            <img id="userAvatar" src="default-avatar.png" alt="User Avatar" class="rounded-circle me-2" style="width: 40px; height: 40px;">
-            <span id="userDisplayName" class="fw-bold me-4">اسم المستخدم</span>
-          </div>
-          <button class="btn btn-outline-secondary btn-sm me-2" onclick="toggleLanguage()">🌐 English / عربي</button>
-          <button class="btn btn-outline-secondary btn-sm" onclick="logout()">🔓 تسجيل الخروج</button>
-        </div>
-        <div class="d-flex align-items-center">
-          <button class="btn btn-outline-secondary btn-sm me-3" onclick="fetchData()">🔄 تحديث</button>
-          <button class="btn btn-outline-secondary btn-sm me-2" id="deleteButton" onclick="deleteDocument()">🗑️ حذف</button>
-          <button class="btn btn-outline-secondary btn-sm me-2" id="deleteButton" onclick="HomeDocument()">🏠 الرئيسية</button>
-        </div>
-
+  <div class="header d-flex align-items-center p-3 bg-light border-bottom">        
+  <div class="d-flex align-items-center">
+    
+    <div class="dropdown me-3">
+      <div class="user-info d-flex align-items-center dropdown-toggle" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false" style="cursor: pointer;">
+        <img id="userAvatar" src="default-avatar.png" alt="User Avatar" 
+             class="rounded-circle me-2" style="width: 40px; height: 40px;">
+        <span id="userDisplayName" class="fw-bold">اسم المستخدم</span>
+      </div>
+      
+      <ul class="dropdown-menu" aria-labelledby="userMenu">
+        <li><a class="dropdown-item" href="#" onclick="changePassword()">🔑 تغيير كلمة المرور</a></li>
+        <li><a class="dropdown-item text-danger" href="#" onclick="logout()">🔓 تسجيل الخروج</a></li>
+      </ul>
     </div>
+    
+    <button class="btn btn-outline-secondary btn-sm me-2" onclick="toggleLanguage()">🌐 English / عربي</button>
+  </div>
+
+  <div class="d-flex align-items-center">
+    <button class="btn btn-outline-secondary btn-sm me-3" onclick="fetchData()">🔄 تحديث</button>
+    <button class="btn btn-outline-secondary btn-sm me-2" id="deleteButton" onclick="deleteDocument()">🗑️ حذف</button>
+    <button class="btn btn-outline-secondary btn-sm me-2" onclick="showSection('Dashboard')">🏠 الرئيسية</button>
+  </div>
+</div>
+
 
     <div class="sidebar p-3 bg-body-tertiary" id="sidebar">
       <div class="card mb-3">
@@ -14211,10 +14532,33 @@ table thead {
                </div>
            </div>
         </div>
-    </div>
-</body>
+       
+  </div>
+<div class="content active" id="Dashboard">
+  <div class="card">
+    <div class="card-header text-center">📊 Dashboard</div>  
 
-<div id="PageSettings" class="content">
+    <div class="chart-row">
+      <div class="chart-card">
+        <h4>الإحصائيات المجمعة</h4>
+        <canvas id="combinedChart"></canvas>
+      </div>
+    </div> 
+
+    <div class="chart-row">
+      <div class="chart-card">
+        <h4>الإحصائيات حسب الموقع</h4>
+        <canvas id="locationChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h4>الإحصائيات حسب الصنف</h4>
+        <canvas id="itemChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="PageSettings" class="content" style="display: none;">
   <div class="card">
     <div class="card-header text-center">إعدادات الصفحة</div>
     <div class="grid-container p-3">
@@ -17469,7 +17813,9 @@ table thead {
     </div>
 </div>
 
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
@@ -17555,6 +17901,10 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
+function HomeDocument() {
+  showSection('Dashboard');
+}
+
 // ============ أدوات إظهار وإخفاء وتحكم عام ============
 
 const hideElements = (selectors) =>
@@ -17580,7 +17930,11 @@ const clearDataAttrs = (ids) =>
 
 // ============ عرض قسم + تحديث داخلي ============
 
+// عرض قسم محدد
 function showSection(sectionId) {
+  // تعديل الرابط ليحتوي على ?section=ID
+  history.pushState(null, '', `?section=${sectionId}`);
+
   const loader = document.getElementById('loader');
   const section = document.getElementById(sectionId);
   const dataIds = [
@@ -17609,6 +17963,7 @@ function showSection(sectionId) {
 
     const resultsTable = section.querySelector('#resultsTable');
     if (resultsTable) resultsTable.innerHTML = '';
+
     section.style.display = 'block';
     section.classList.remove('show');
     void section.offsetWidth;
@@ -17620,6 +17975,19 @@ function showSection(sectionId) {
 
   }, 1000);
 }
+
+// عند تحميل الصفحة
+window.addEventListener('DOMContentLoaded', () => {
+  const sectionId = new URLSearchParams(window.location.search).get('section');
+  
+  if (sectionId) {
+    showSection(sectionId);
+  } else {
+    // لو مفيش section في الرابط → عرض الداشبورد فقط
+    hideElements(['.content']);
+    document.querySelector('.content.active').style.display = 'block';
+  }
+});
 
 // ============ عرض الأقسام الفرعية ============
 
@@ -17857,6 +18225,7 @@ function updateCustomSections() {
   set('createUserBtn', '💾 إنشاء', '💾 Create');
 
 }
+
 
 </script>
 
