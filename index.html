@@ -2825,8 +2825,16 @@ function loadCompaniesIntoSelectOrder() {
 document.addEventListener("DOMContentLoaded", loadCompaniesIntoSelectOrder);
 
 let addedItemsPurchase = [];
+
 window.saveOrder = async function () {
-    const purchaseDate = document.getElementById('purchaseDate').value.trim();
+    const OrderSave = localStorage.getItem('OrderSave') === 'true';
+
+    if (!OrderSave) {
+     alert("❌ ليس لديك صلاحية حفظ البيانات.");
+      return;
+    }
+
+    const purchaseDate = document.getElementById('purchaseDate22').value.trim();
     const notesPurchase = document.getElementById('purchaseNotes').value.trim();
     const locationPurchase = document.getElementById('purchaseLocation').value.trim();
     const purchaseReason = document.getElementById('purchaseReason').value.trim();
@@ -2837,12 +2845,10 @@ window.saveOrder = async function () {
     const companyName = document.getElementById("CompanySelectOrder").selectedOptions[0]?.textContent || "";
 
     let documentNumberOrder;
-
     if (!purchaseDate) {
-        alert("يرجى إدخال التاريخ قبل الحفظ.");
+        alert("❌ يرجى إدخال تاريخ الطلب.");
         return;
     }
-
     if (addedItemsPurchase.length === 0) {
         alert("لا يمكن الحفظ بدون أصناف. يرجى إضافة صنف واحد على الأقل.");
         return;
@@ -12899,7 +12905,8 @@ window.loadUserPermissions = async function () {
     AssetSave: false,
     gpsSave : false,
     gpsEdit : false,
-    GpsQuery : false
+    GpsQuery : false,
+    OrderSave : false,
   };
 
   const permissions = { ...defaultPerms, ...userData.permissions };
@@ -12964,6 +12971,9 @@ window.loadUserPermissions = async function () {
             <td><input type="checkbox" id="gpsEdit"   ${permissions.gpsEdit  ? 'checked' : ''}></td></tr>
         <tr><td> صلاحيه استعلام بيانات GPS </td>
             <td><input type="checkbox" id="GpsQuery"  ${permissions.GpsQuery ? 'checked' : ''}></td></tr>
+        <tr><td> صلاحيه حفظ مستند طلب الشراء </td>
+          <td><input type="checkbox" id="OrderSave"  ${permissions.OrderSave ? 'checked' : ''}></td></tr>
+
       </tbody>
     </table>
   `;
@@ -13011,7 +13021,8 @@ window.updatePowerManagemen = async function () {
     AssetEdit: isChecked('AssetEdit') || false,
     gpsSave : isChecked('gpsSave'),
     gpsEdit : isChecked('gpsEdit'),
-    GpsQuery : isChecked('GpsQuery') || false
+    GpsQuery : isChecked('GpsQuery') || false,
+    OrderSave : isChecked('OrderSave') || false,
 
   };
 
@@ -13062,6 +13073,7 @@ window.loadUserPermissionsOnLogin = async function (username) {
       localStorage.setItem('gpsSave', permissions.gpsSave ? 'true' : 'false');
       localStorage.setItem('gpsEdit', permissions.gpsEdit ? 'true' : 'false');
       localStorage.setItem('GpsQuery', permissions.GpsQuery ? 'true' : 'false');
+      localStorage.setItem('OrderSave', permissions.OrderSave ? 'true' : 'false');
       break;
 
     }
@@ -17671,8 +17683,8 @@ table thead {
           </div>
           
             <div class="col-md-3">
-               <label for="purchaseDate">التاريخ:</label>
-               <input type="date" id="purchaseDate" class="form-control">
+               <label for="purchaseDate22">التاريخ:</label>
+               <input type="date" id="purchaseDate22" class="form-control">
             </div>
             <div class="col-md-3">
               <label for="purchaseLocation">الموقع:</label>
