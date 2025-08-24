@@ -15,13 +15,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
        <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, push, set, update, get , query, orderByChild, equalTo , runTransaction, remove , onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+        import { getDatabase, ref, push, set, update, get , query, orderByChild, equalTo , runTransaction, remove , onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
 
         const firebaseConfig = {
@@ -202,6 +200,7 @@ function loadCompaniesIntoSelect() {
 
 document.addEventListener("DOMContentLoaded", loadCompaniesIntoSelect);
 
+
 window.saveData = function () {
   const canSave = localStorage.getItem('canSave') === 'true';
   const canEdit = localStorage.getItem('canEdit') === 'true';
@@ -328,7 +327,7 @@ window.saveData = function () {
 
  generatePcNum(pcNumInput)
 .then(async pcNum => {
-  const companyCode = document.getElementById("selectedCompanyCode").value.trim();
+  const companyCode = document.getElementById("companySelect").value.trim();
   let companyData = null;
 
   if (companyCode) {
@@ -765,7 +764,7 @@ window.deleteDocument = async function () {
     "orderAmendment", "deliveryAmendment", "maintenanceAmendment",
     "AddAProductAdditionForm", "AddProductDisbursement", "editTemporaryForm",
     "screenForm", "computerSettings", "phoneSettings", "lineSettings",
-    "editUserSection" ,"screenSettings" , "printerSettings" , "definitionCompanies"
+    "editUserSection" ,"screenSettings" , "printerSettings" , "definitionCompanies","fixedAssetsDepreciation","gpsForm","gpsSettings"
   ].find(id => document.getElementById(id)?.offsetParent !== null);
 
   if (!visibleSection) {
@@ -862,6 +861,18 @@ window.deleteDocument = async function () {
     if (type === "companies") {
       await remove(docRef);
       alert("✅ تم حذف الشركه بنجاح نهائيًا بنجاح.");
+      if (typeof clearFormFields === "function") clearFormFields();
+      return;
+    }
+    if (type === "fixedAssets") {
+      await remove(docRef);
+      alert("✅ تم حذف الاهلاك بنجاح نهائيًا بنجاح.");
+      if (typeof clearFormFields === "function") clearFormFields();
+      return;
+    }
+    if (type === "GPSS") {
+      await remove(docRef);
+      alert("✅ تم حذف GPS بنجاح نهائيًا بنجاح.");
       if (typeof clearFormFields === "function") clearFormFields();
       return;
     }
@@ -1194,7 +1205,16 @@ window.fetchData = function () {
   const isEditCameraSettingsVisible = document.getElementById("cameraSettings")?.offsetParent !== null;
   const isEditCameraFormVisible = document.getElementById("cameraForm")?.offsetParent !== null;
   const isEditdefinitionCompanies = document.getElementById("definitionCompanies")?.offsetParent !== null;
+  const isEditFixed = document.getElementById("fixedAssetsDepreciation")?.offsetParent !== null;
+  const isEditGPS = document.getElementById("gpsForm")?.offsetParent !== null;
+  const isEditGpsSettings= document.getElementById("gpsSettings")?.offsetParent !== null;
 
+  if (isEditGPS) {
+    fetchGpsData();
+  }
+  if (isEditGpsSettings) {
+    fetchGpsSettingsData();
+  }
   if (isComputerFormVisible) {
     fetchComputerData();
   }
@@ -1255,10 +1275,78 @@ window.fetchData = function () {
   if (isEditCameraFormVisible) {
     fetchCameraData();
   }
-  if (!isEditdefinitionCompanies && !isEditCameraFormVisible && !isEditCameraSettingsVisible && !isEditPrinterSettingsVisible && !isEditScreenSettingsVisible && !isEditLineSettingsVisible && !isEditPhoneSettingsVisible && !isComputerFormVisible && !isPhoneFormVisible && !isprintFormVisible && !isRouterFormVisible && !isLineFormVisible && !isOrderFormVisible && !isDeliveryFormVisible && !isMaintenanceFormVisible && !isAddAProductAdditionFormVisible && !isAddProductDisbursementVisible && !isEditTemporaryFormVisible && !isEditScreenFormVisible && !isEditComputerSettingsVisible) {
+  if (isEditFixed) {
+    fetchFixedAssetsDepreciationData();
+  }
+  if (!isEditGpsSettings && !isEditGPS && !isEditdefinitionCompanies &&  !isEditCameraFormVisible && !isEditCameraSettingsVisible && !isEditPrinterSettingsVisible && !isEditScreenSettingsVisible && !isEditLineSettingsVisible && !isEditPhoneSettingsVisible && !isComputerFormVisible && !isPhoneFormVisible && !isprintFormVisible && !isRouterFormVisible && !isLineFormVisible && !isOrderFormVisible && !isDeliveryFormVisible && !isMaintenanceFormVisible && !isAddAProductAdditionFormVisible && !isAddProductDisbursementVisible && !isEditTemporaryFormVisible && !isEditScreenFormVisible && !isEditComputerSettingsVisible && !isEditPhoneSettingsVisible && !isEditLineSettingsVisible && !isEditScreenSettingsVisible && !isEditPrinterSettingsVisible && !isEditCameraSettingsVisible && !isEditCameraFormVisible && !isEditFixed ) {
     alert("❌ هذا القسم ليس لديه  رقم مستند لجلب البيانات ");
   }
 };
+
+
+
+async function fetchFixedAssetsDepreciationData() {
+  const assetCode = document.getElementById("assetCode").value.trim();
+
+  if (!assetCode) {
+    alert("❌ يرجى إدخال كود الأصل!");
+    return;
+  }
+
+  const dbRef = ref(database, "fixedAssets");
+
+  try {
+    const snapshot = await get(dbRef);
+    if (!snapshot.exists()) {
+      alert("❌ لا توجد بيانات أصول!");
+      return;
+    }
+
+    const data = snapshot.val();
+    let found = null;
+
+    for (const key in data) {
+      if (data[key].assetCode === assetCode) {
+        found = { id: key, ...data[key] };
+        break;
+      }
+    }
+
+    if (!found) {
+      alert("❌ لا يوجد أصل بهذا الكود!");
+      return;
+    }
+
+    document.getElementById("assetId").value = found.id;
+
+    document.getElementById("assetCode").value = found.assetCode || "";
+    document.getElementById("description").value = found.description || "";
+    document.getElementById("assetCostCenter").value = found.costCenter || "";
+    document.getElementById("deviceType").value = found.deviceType || "";
+    document.getElementById("cost").value = found.cost || "";
+    document.getElementById("residual").value = found.residual || "";
+    document.getElementById("purchaseDate").value = found.purchaseDate || "";
+    document.getElementById("usefulLife").value = found.usefulLife || "";
+    document.getElementById("depMethod").value = found.depreciationMethod || "";
+    document.getElementById("depRate").value = found.depreciationRate || "";
+
+    await loadLinkedDevicesFor(found.deviceType || "أخرى", found.linkedCode || "");
+    document.getElementById("linkedDevice").value = found.linkedCode || "";
+
+    document.getElementById("outAccum").textContent = found.accumulatedDep || "0.00";
+    document.getElementById("outNBV").textContent = found.netBookValue || "0.00";
+    document.getElementById("outAsOf").textContent = found.lastCalcDate || "—";
+
+    const deleteBtn = document.getElementById("deleteButton");
+    deleteBtn.style.display = "inline-block";
+    deleteBtn.setAttribute("data-id", found.id);
+    deleteBtn.setAttribute("data-type", "fixedAssets");
+
+    alert("✅ تم جلب بيانات الأصل بنجاح!");
+  } catch (error) {
+    alert("❌ خطأ أثناء جلب البيانات: " + error.message);
+  }
+}
 
 function fetchCompanyData() {
   const companyCode1 = document.getElementById("companyCode1").value.trim();
@@ -1299,7 +1387,7 @@ function fetchCompanyData() {
 
     const deleteBtn = document.getElementById("deleteButton");
     deleteBtn.style.display = "inline-block";
-    deleteBtn.setAttribute("data-id", found.id); // استخدم id الصحيح
+    deleteBtn.setAttribute("data-id", found.id); 
     deleteBtn.setAttribute("data-type", "companies");
 
     alert("✅ تم جلب بيانات الشركة بنجاح!");
@@ -1444,6 +1532,39 @@ async function fetchDeviceDataCamera() {
             alert("✅ تم جلب بيانات نوع الكاميرا بنجاح!");
         } else {
             alert("❌ لم يتم العثور على نوع الكاميرا بهذا النوع.");
+        }
+    } catch (error) {
+        alert("❌ حدث خطأ أثناء جلب البيانات: " + error.message);
+    }
+}
+
+async function fetchGpsSettingsData() {
+    const deviceType = document.getElementById("GPSTypeInput").value.trim();
+
+    if (!deviceType) {
+        alert("❌ يرجى إدخال نوع GPS  !");
+        return;
+    }
+
+    try {
+        const deviceRef = ref(database, "GPS/" + deviceType);
+        const snapshot = await get(deviceRef);
+
+        if (snapshot.exists()) {
+            const deviceData = snapshot.val();
+
+            document.getElementById("GPSModelsInput").value = deviceData.models.join(", ");
+
+            currentEditingGpsType = deviceType;
+            const deleteBtn = document.getElementById("deleteButton");
+            deleteBtn.style.display = "inline-block";
+            deleteBtn.setAttribute("data-id", deviceType);
+            deleteBtn.setAttribute("data-type", "GPS");
+
+
+            alert("✅ تم جلب بيانات نوع GPS بنجاح!");
+        } else {
+            alert("❌ لم يتم العثور على نوع GPS بهذا النوع.");
         }
     } catch (error) {
         alert("❌ حدث خطأ أثناء جلب البيانات: " + error.message);
@@ -2486,6 +2607,90 @@ function fetchComputerData() {
           deleteBtn.style.display = "inline-block";
           deleteBtn.setAttribute("data-id", found.id);
           deleteBtn.setAttribute("data-type", "computers");
+        }         
+        alert("✅ تم جلب بيانات الجهاز بنجاح!");
+      } else {
+        alert("❌ لم يتم العثور على جهاز بهذا الرقم!");
+      }
+    } else {
+      alert("❌ لا توجد بيانات أجهزة!");
+    }
+  }).catch((error) => {
+    alert("❌ خطأ أثناء جلب البيانات: " + error.message);
+  });
+}
+
+function fetchGpsData() {
+  const docNumberGPS = document.getElementById("docNumberGPS").value.trim();
+
+  if (!docNumberGPS) {
+    alert("❌ يرجى إدخال رقم جهاز الكمبيوتر!");
+    return;
+  }
+
+  const dbRef = ref(database, "GPSS");
+
+  get(dbRef).then((snapshot) => {
+    if (snapshot.exists()) {
+      const data = snapshot.val();
+      let found = null;
+
+      for (const key in data) {
+        if (parseInt(data[key].docNumberGPS) === parseInt(docNumberGPS)) {
+          found = { id: key, ...data[key] };
+          break;
+        }
+      }
+
+      if (found) {
+        document.getElementById("docNumberGPS").value = found.docNumberGPS || "";
+        document.getElementById("locationGPS").value = found.locationGPS || "";
+        document.getElementById("installDateGPS").value = found.installDateGPS || "";
+        document.getElementById("carLicenseGPS").value = found.carLicenseGPS || "";
+        document.getElementById("carTypeGPS").value = found.carTypeGPS || "";
+        document.getElementById("imeiGPS").value = found.imeiGPS || "";
+        document.getElementById("GPSType").value = found.GPSType || "";
+        document.getElementById("GPSModel").value = found.GPSModel || "";
+        document.getElementById("employeeNameGPS").value = found.employeeNameGPS || "";
+        document.getElementById("lineNumberGPS").value = found.lineNumberGPS || "";
+        document.getElementById("simNumberGPS").value = found.simNumberGPS || "";
+        document.getElementById("snPROCESSOR").value = found.snPROCESSOR || "";
+        document.getElementById("statusGPS").value = found.statusGPS || "";
+        document.getElementById("notesGPS").value = found.notesGPS || "";
+        document.getElementById("companySelect2").value = found.companyCode || "";
+        document.getElementById("docNumberGPS").setAttribute("data-id", found.id);
+        const deviceTypeSelect = document.getElementById("GPSType");
+        const deviceModelSelect = document.getElementById("GPSModel");
+        const selectedType = found.GPSType || "";
+        const selectedModel = found.GPSModel || "";
+        deviceTypeSelect.value = selectedType;
+        if (selectedType) {
+          const modelsRef = ref(database, "GPS/" + selectedType + "/models");
+          get(modelsRef).then((snapshot) => {
+            const models = snapshot.val();
+            deviceModelSelect.innerHTML = '<option value="">-- Select model --</option>';
+
+            if (Array.isArray(models)) {
+              models.forEach((model) => {
+                const opt = document.createElement("option");
+                opt.value = model;
+                opt.textContent = model;
+                deviceModelSelect.appendChild(opt);
+              });
+              deviceModelSelect.value = selectedModel;
+            }
+          });
+        } else {
+          deviceModelSelect.innerHTML = '<option value="">-- Select model --</option>';
+        }
+
+        const deleteBtn = document.getElementById("deleteButton");
+        const canDelete = localStorage.getItem('canDelete') === 'true';
+
+        if (canDelete) {
+          deleteBtn.style.display = "inline-block";
+          deleteBtn.setAttribute("data-id", found.id);
+          deleteBtn.setAttribute("data-type", "GPSS");
         }         
         alert("✅ تم جلب بيانات الجهاز بنجاح!");
       } else {
@@ -12690,6 +12895,11 @@ window.loadUserPermissions = async function () {
     LineSave: false,
     LineEdit: false,
     LineQuery: false,
+    AssetEdit: false, 
+    AssetSave: false,
+    gpsSave : false,
+    gpsEdit : false,
+    GpsQuery : false
   };
 
   const permissions = { ...defaultPerms, ...userData.permissions };
@@ -12744,7 +12954,16 @@ window.loadUserPermissions = async function () {
             <td><input type="checkbox" id="LineEdit"   ${permissions.LineEdit  ? 'checked' : ''}></td></tr>
         <tr><td>صلاحيه الاستعلام عن الخطوط</td>
             <td><input type="checkbox" id="LineQuery1"  ${permissions.LineQuery ? 'checked' : ''}></td></tr>
-
+        <tr><td>صلاحيه حفظ الاصول </td>
+            <td><input type="checkbox" id="AssetSave"   ${permissions.AssetSave  ? 'checked' : ''}></td></tr>
+        <tr><td> صلاحيه تعديل الاصول </td>
+            <td><input type="checkbox" id="AssetEdit"  ${permissions.AssetEdit ? 'checked' : ''}></td></tr>
+        <tr><td> صلاحيه حفظ مستند GPS</td>
+            <td><input type="checkbox" id="gpsSave"  ${permissions.gpsSave ? 'checked' : ''}></td></tr>
+        <tr><td>صلاحيه تعديل  GPS </td>
+            <td><input type="checkbox" id="gpsEdit"   ${permissions.gpsEdit  ? 'checked' : ''}></td></tr>
+        <tr><td> صلاحيه استعلام بيانات GPS </td>
+            <td><input type="checkbox" id="GpsQuery"  ${permissions.GpsQuery ? 'checked' : ''}></td></tr>
       </tbody>
     </table>
   `;
@@ -12788,6 +13007,12 @@ window.updatePowerManagemen = async function () {
     LineSave:  isChecked('LineSave'),
     LineEdit:  isChecked('LineEdit'),
     LineQuery: isChecked('LineQuery1') || false,
+    AssetSave:  isChecked('AssetSave'),
+    AssetEdit: isChecked('AssetEdit') || false,
+    gpsSave : isChecked('gpsSave'),
+    gpsEdit : isChecked('gpsEdit'),
+    GpsQuery : isChecked('GpsQuery') || false
+
   };
 
   try {
@@ -12832,6 +13057,11 @@ window.loadUserPermissionsOnLogin = async function (username) {
       localStorage.setItem('LineSave', permissions.LineSave ? 'true' : 'false');
       localStorage.setItem('LineEdit', permissions.LineEdit ? 'true' : 'false');
       localStorage.setItem('LineQuery1', permissions.LineQuery ? 'true' : 'false');
+      localStorage.setItem('AssetSave', permissions.AssetSave ? 'true' : 'false');
+      localStorage.setItem('AssetEdit', permissions.AssetEdit ? 'true' : 'false');
+      localStorage.setItem('gpsSave', permissions.gpsSave ? 'true' : 'false');
+      localStorage.setItem('gpsEdit', permissions.gpsEdit ? 'true' : 'false');
+      localStorage.setItem('GpsQuery', permissions.GpsQuery ? 'true' : 'false');
       break;
 
     }
@@ -13765,6 +13995,1145 @@ window.changePassword = async function () {
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////// مراكز التكلفه ////////////////////////////////////////
+  window.saveCostCenter = function () {
+    const codeInput = document.getElementById("costCenterCode").value.trim();
+    const name = document.getElementById("costCenterName").value.trim();
+    const desc = document.getElementById("costCenterDesc").value.trim();
+    const parent = document.getElementById("parentCostCenter").value;
+    const level = parent ? parseInt(document.getElementById("costCenterLevel").value) + 1 : 1;
+
+    if (!name) return alert("⚠️ يجب إدخال اسم المركز");
+
+    if (level > 1 && !parent) {
+      return alert("⚠️ لا يمكن إنشاء فرع بدون اختيار مركز رئيسي");
+    }
+
+    if (!codeInput) {
+      get(ref(database, "costCenters")).then(snapshot => {
+        let max = 99; 
+        snapshot.forEach(child => {
+          const c = parseInt(child.key);
+          if (!isNaN(c) && c > max) max = c;
+        });
+
+        const newCode = (max + 1).toString();
+        const data = { code: newCode, name, desc, parent, level };
+
+        set(ref(database, "costCenters/" + newCode), data)
+          .then(() => {
+            alert("✅ تم الحفظ (الكود: " + newCode + ")");
+            clearCostCenterForm();
+            loadCostCenters();
+          })
+          .catch(e => alert("❌ خطأ: " + e.message));
+      });
+    } else {
+      const data = { code: codeInput, name, desc, parent, level };
+      set(ref(database, "costCenters/" + codeInput), data)
+        .then(() => {
+          alert("✅ تم التحديث");
+          clearCostCenterForm();
+          loadCostCenters();
+        })
+        .catch(e => alert("❌ خطأ: " + e.message));
+    }
+  };
+
+window.loadCostCenters = function () {
+  const tree = document.getElementById("costCenterTree");
+  const parentSelect = document.getElementById("parentCostCenter");
+  tree.innerHTML = "";
+  parentSelect.innerHTML = "<option value=''>-- رئيسي --</option>";
+
+  get(ref(database, "costCenters")).then(snapshot => {
+    const all = [];
+    snapshot.forEach(child => {
+      all.push(child.val());
+    });
+
+    function buildTree(parent = "") {
+      const ul = document.createElement("ul");
+      all.filter(c => c.parent === parent).forEach(c => {
+        const li = document.createElement("li");
+
+        const text = document.createElement("span");
+        text.textContent = `${c.code} - ${c.name}`;
+        text.style.cursor = "pointer";
+        text.onclick = (e) => {
+          e.stopPropagation(); // منع التداخل مع الأب
+          editCostCenter(c);
+        };
+
+        const editBtn = document.createElement("button");
+        editBtn.textContent = "✏️";
+        editBtn.style.marginLeft = "10px";
+        editBtn.onclick = (e) => {
+          e.stopPropagation();
+          editCostCenter(c);
+        };
+
+        li.appendChild(text);
+        li.appendChild(editBtn);
+        li.appendChild(buildTree(c.code));
+        ul.appendChild(li);
+
+        parentSelect.innerHTML += `<option value="${c.code}">${c.code} - ${c.name}</option>`;
+      });
+      return ul;
+    }
+
+    tree.appendChild(buildTree(""));
+  });
+};
+
+  window.editCostCenter = function (c) {
+    document.getElementById("costCenterCode").value = c.code;
+    document.getElementById("costCenterName").value = c.name;
+    document.getElementById("costCenterDesc").value = c.desc || "";
+    document.getElementById("parentCostCenter").value = c.parent || "";
+    document.getElementById("costCenterLevel").value = c.level;
+  };
+  window.clearCostCenterForm = function () {
+    ["costCenterCode","costCenterName","costCenterDesc","costCenterLevel"].forEach(id => document.getElementById(id).value = "");
+    document.getElementById("parentCostCenter").value = "";
+  };
+window.onload = loadCostCenters;
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////// Gps ///////////////////////////////////////////////////////////////////////
+let currentEditingGpsType = null;
+window.addGPSData = async function () {
+    const newType = document.getElementById("GPSTypeInput").value.trim();
+    const models = document.getElementById("GPSModelsInput").value
+        .split(',')
+        .map(m => m.trim())
+        .filter(Boolean);
+
+    if (!newType || models.length === 0) {
+        alert("❌ يرجى إدخال نوع الجهاز والموديلات.");
+        return;
+    }
+
+    if (currentEditingGpsType && newType !== currentEditingGpsType) {
+        await remove(ref(database, "GPS/" + currentEditingGpsType));
+    }
+
+    await set(ref(database, "GPS/" + newType), {
+        models: models
+    });
+
+    alert(currentEditingGpsType ? "✅ تم حفظ بيانات الجهاز." : "✅ تم إضافة الجهاز بنجاح.");
+    document.getElementById("GPSTypeInput").value = "";
+    document.getElementById("GPSModelsInput").value = "";
+    document.getElementById("updateDeviceButton").textContent = "إضافة";
+    document.getElementById("deleteDeviceButton").style.display = "none";
+    currentEditingGpsType = null;
+    loadGpsTable();
+    populateGpsTypeOptions();
+};
+
+window.editGpsType = function (type) {
+    const modelsRef = ref(database, "GPS/" + type + "/models");
+
+    get(modelsRef).then(snapshot => {
+        const models = snapshot.val();
+
+        if (Array.isArray(models)) {
+            document.getElementById("GPSTypeInput").value = type;
+            document.getElementById("GPSModelsInput").value = models.join(', ');
+            currentEditingGpsType = type;
+            document.getElementById("updateDeviceButton").textContent = "تحديث";
+            document.getElementById("deleteDeviceButton").style.display = "inline-block";
+        }
+    });
+};
+
+function loadGpsTable() {
+    const tableBody = document.querySelector("#GPSTable tbody");
+    const deviceRef = ref(database, "GPS");
+
+    onValue(deviceRef, (snapshot) => {
+        const data = snapshot.val();
+        tableBody.innerHTML = "";
+
+        for (const type in data) {
+            const models = data[type].models;
+            const row = document.createElement("tr");
+
+            row.innerHTML = `
+                <td>${type}</td>
+                <td>${models.join(', ')}</td>
+            `;
+
+            row.addEventListener("click", () => {
+                fetchGpsSettingsData(type);
+            });
+
+            tableBody.appendChild(row);
+        }
+    });
+}
+
+function populateGpsTypeOptions() {
+  const deviceTypeSelect = document.getElementById("GPSType");
+  const queryDeviceType = document.getElementById("queryGpsType");
+
+  const deviceRef = ref(database, "GPS");
+
+  onValue(deviceRef, (snapshot) => {
+    const data = snapshot.val();
+
+    const defaultOption = '<option value="">-- اختر نوع الجهاز --</option>';
+    deviceTypeSelect.innerHTML = defaultOption;
+    queryDeviceType.innerHTML = defaultOption;
+
+    if (!data) return;
+
+    Object.keys(data).forEach(type => {
+      const option1 = document.createElement("option");
+      option1.value = type;
+      option1.textContent = type;
+
+      const option2 = option1.cloneNode(true); 
+
+      deviceTypeSelect.appendChild(option1);
+      queryDeviceType.appendChild(option2);
+    });
+  }, {
+    onlyOnce: true 
+  });
+}
+
+document.getElementById("GPSType").addEventListener("change", (e) => {
+    const selectedType = e.target.value;
+    const modelSelect = document.getElementById("GPSModel");
+
+    modelSelect.innerHTML = '<option value="">-- اختر الموديل --</option>';
+
+    if (selectedType) {
+        const modelsRef = ref(database, "GPS/" + selectedType + "/models");
+        onValue(modelsRef, (snapshot) => {
+            const models = snapshot.val();
+            if (Array.isArray(models)) {
+                models.forEach(model => {
+                    const opt = document.createElement("option");
+                    opt.value = model;
+                    opt.textContent = model;
+                    modelSelect.appendChild(opt);
+                });
+            }
+        });
+    }
+});
+loadGpsTable();
+populateGpsTypeOptions();
+
+function loadCompaniesIntoSelect2() {
+  const companySelect = document.getElementById("companySelect2");
+  const queryCompanySelect = document.getElementById("queryCompanySelectGps");
+  const selectedCompanyCode = document.getElementById("selectedCompanyCodeGps");
+
+  if (companySelect) companySelect.innerHTML = '<option value="">-- اختر شركة --</option>';
+  if (queryCompanySelect) queryCompanySelect.innerHTML = '<option value="">-- اختر شركة --</option>';
+
+  const companiesRef = ref(database, "companies");
+
+  onValue(companiesRef, (snapshot) => {
+    snapshot.forEach((childSnapshot) => {
+      const company = childSnapshot.val();
+
+      const option = document.createElement("option");
+      option.value = company.code;
+      option.textContent = company.name;
+      if (companySelect) companySelect.appendChild(option);
+
+      if (queryCompanySelect) {
+        const option2 = document.createElement("option");
+        option2.value = company.code;
+        option2.textContent = company.name;
+        queryCompanySelect.appendChild(option2);
+      }
+    });
+  });
+  if (companySelect && selectedCompanyCode) {
+    companySelect.addEventListener("change", () => {
+      selectedCompanyCode.value = companySelect.value;
+    });
+  }
+}
+
+document.addEventListener("DOMContentLoaded", loadCompaniesIntoSelect2);
+
+
+document.addEventListener("DOMContentLoaded", function () {
+  const phoneInput = document.getElementById("lineNumberGPS");
+  if (!phoneInput) {
+    console.error("❌ عنصر lineNumberGPS غير موجود!");
+    return;
+  }
+
+  phoneInput.addEventListener("input", async function () {
+    const phone = this.value.trim();
+    const phoneRegex = /^01[0-9]{9}$/; // مثال: أرقام مصر
+
+    if (!phoneRegex.test(phone)) return;
+
+    try {
+      const linesRef = ref(database, "lines");
+      const snapshot = await get(linesRef);
+
+      if (snapshot.exists()) {
+        let found = false;
+        snapshot.forEach(child => {
+          const line = child.val();
+          const linePhone = (line.phoneNumber || "").trim();
+          if (!line.deleted && linePhone === phone) {
+            document.getElementById("employeeNameGPS").value = line.employeeName || '';
+            document.getElementById("simNumberGPS").value = line.simNumber || '';
+            found = true;
+            console.log("✅ تم العثور على الخط:", line);
+          }
+        });
+
+        if (!found) {
+          document.getElementById("employeeNameGPS").value = '';
+          document.getElementById("simNumberGPS").value = '';
+          console.warn("⚠️ لم يتم العثور على خط بهذا الرقم.");
+        }
+      }
+    } catch (error) {
+      console.error("❌ خطأ أثناء جلب بيانات الخط:", error);
+    }
+  });
+});
+
+window.saveDataGPS = function () {
+  const gpsSave = localStorage.getItem('gpsSave') === 'true';
+  const gpsEdit = localStorage.getItem('gpsEdit') === 'true';
+  const dataId = document.getElementById("docNumberGPS").getAttribute("data-id");
+
+  if (!dataId && !gpsSave) return Swal.fire("❌ خطأ", "ليس لديك صلاحية إضافة بيانات جديدة.", "error");
+  if (dataId && !gpsEdit) return Swal.fire("❌ خطأ", "ليس لديك صلاحية تعديل البيانات.", "error");
+
+  const docNumberGPS = document.getElementById("docNumberGPS").value.trim();
+  const locationGPS = document.getElementById("locationGPS").value.trim();
+  const installDateGPS = document.getElementById("installDateGPS").value.trim();
+  const carLicenseGPS = document.getElementById("carLicenseGPS").value.trim();
+  const carTypeGPS = document.getElementById("carTypeGPS").value.trim();
+  const imeiGPS = document.getElementById("imeiGPS").value.trim();
+  const GPSType = document.getElementById("GPSType").value.trim();
+  const GPSModel = document.getElementById("GPSModel").value.trim();
+  const employeeNameGPS = document.getElementById("employeeNameGPS").value.trim();
+  const lineNumberGPS = document.getElementById("lineNumberGPS").value.trim();
+  const simNumberGPS = document.getElementById("simNumberGPS").value.trim();
+  const statusGPS = document.getElementById("statusGPS").value.trim();
+  const notesGPS = document.getElementById("notesGPS").value.trim();
+  const companyCode = document.getElementById("companySelect2").value.trim();
+
+  if (!installDateGPS || !carLicenseGPS || !carTypeGPS || !companyCode) {
+    return Swal.fire("⚠️ تنبيه", "يرجى ملء جميع الحقول الأساسية!", "warning");
+  }
+
+  const generateDocNumber = (manualNum = null) => {
+    return new Promise((resolve, reject) => {
+      get(ref(database, "GPSS")).then(snapshot => {
+        const existingNums = new Set();
+        snapshot.forEach(child => {
+          const num = parseInt(child.val().docNumberGPS);
+          if (!isNaN(num)) existingNums.add(num);
+        });
+
+        if (manualNum) {
+          const parsed = parseInt(manualNum);
+          if (isNaN(parsed)) return reject(new Error("⚠️ الرقم المدخل غير صالح."));
+          if (existingNums.has(parsed) && !dataId) return reject(new Error("⚠️ الرقم موجود مسبقًا."));
+          resolve(parsed);
+        } else {
+          let next = 1;
+          while (existingNums.has(next)) next++;
+          resolve(next);
+        }
+      }).catch(reject);
+    });
+  };
+
+  const saveOrUpdate = (docNumberGPS, companyData = {}) => {
+    const data = {
+      docNumberGPS,
+      locationGPS, installDateGPS,
+      carLicenseGPS, carTypeGPS,
+      GPSType, GPSModel, imeiGPS,
+      employeeNameGPS, lineNumberGPS, simNumberGPS,
+      statusGPS, notesGPS, companyCode,
+      company: companyData,
+      updatedAt: new Date().toISOString() // وقت آخر تعديل
+    };
+
+    document.getElementById("docNumberGPS").setAttribute("readonly", true);
+
+    Swal.fire({
+      title: '⏳ جاري الحفظ',
+      text: 'يرجى الانتظار...',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    if (dataId) {
+      const gpsRef = ref(database, "GPSS/" + dataId);
+      get(gpsRef).then(snapshot => {
+        if (snapshot.exists() && snapshot.val().deleted) {
+          Swal.fire("⚠️ تنبيه", "الجهاز محذوف ولا يمكن تعديله!", "warning");
+        } else {
+          update(gpsRef, data)
+            .then(() => {
+              Swal.fire("✅ نجاح", "تم تحديث البيانات بنجاح", "success");
+              clearFormGPS();
+            })
+            .catch(e => Swal.fire("❌ خطأ", "فشل في التحديث: " + e.message, "error"));
+        }
+      });
+    } else {
+      push(ref(database, "GPSS"), data)
+        .then(() => {
+          Swal.fire("✅ نجاح", "تم حفظ البيانات بنجاح!", "success");
+          clearFormGPS();
+        })
+        .catch(e => Swal.fire("❌ خطأ", "فشل في الحفظ: " + e.message, "error"));
+    }
+  };
+
+  generateDocNumber(docNumberGPS)
+    .then(async finalDocNum => {
+      let companyData = {};
+      try {
+        const companyRef = ref(database, "companySettings/" + companyCode);
+        const snapshot = await get(companyRef);
+
+        if (snapshot.exists()) {
+          companyData = snapshot.val();
+          console.log("✅ تم جلب بيانات الشركة:", companyData);
+        } else {
+          console.warn("⚠️ لم يتم العثور على بيانات الشركة:", companyCode);
+        }
+      } catch (error) {
+        console.error("❌ خطأ أثناء تحميل بيانات الشركة:", error);
+        Swal.fire("❌ خطأ", "حدث خطأ أثناء تحميل بيانات الشركة: " + error.message, "error");
+      }
+
+      saveOrUpdate(finalDocNum, companyData);
+    })
+    .catch(err => Swal.fire("⚠️ تنبيه", err.message, "warning"));
+};
+
+function clearFormGPS() {
+  const fields = [
+    "docNumberGPS", "locationGPS", "installDateGPS",
+    "carLicenseGPS", "carTypeGPS", "imeiGPS",
+    "GPSType", "GPSModel", "employeeNameGPS",
+    "lineNumberGPS", "simNumberGPS", "statusGPS",
+    "notesGPS", "companySelect2"
+  ];
+
+  fields.forEach(id => {
+    const element = document.getElementById(id);
+    if (element) element.value = "";
+  });
+
+  const docNumberGPS = document.getElementById("docNumberGPS");
+  if (docNumberGPS) {
+    docNumberGPS.removeAttribute("readonly");
+    docNumberGPS.removeAttribute("data-id");
+  }
+}
+
+window.searchDataGPS = async function () {
+  const resultsContainer = document.getElementById("queryResultsGps");
+  const GpsQuery = localStorage.getItem('GpsQuery') === 'true';
+  const dataId = document.getElementById("queryGPS").getAttribute("data-id");
+
+  if (!dataId && !GpsQuery) {
+    alert("❌ ليس لديك صلاحية الاستعلام.");
+    return;
+  }
+
+  const inputs = {
+    queryGPS: document.getElementById("queryGPS").value.trim().toLowerCase(),
+    queryGPSUser: document.getElementById("queryGPSUser").value.trim().toLowerCase(),
+    queryLocationGPS: document.getElementById("queryLocationGPS").value.trim().toLowerCase(),
+    querydateAddedGPS: document.getElementById("querydateAddedGPS").value.trim().toLowerCase(),
+    queryGpsType: document.getElementById("queryGpsType").value.trim().toLowerCase(),
+    generalSearchGPS: document.getElementById("generalSearchGPS").value.trim().toLowerCase(),
+    queryCompanySelectGps: document.getElementById("queryCompanySelectGps").value.trim().toLowerCase()
+  };
+
+  resultsContainer.innerHTML = "⏳ جاري البحث...";
+
+  try {
+    const snapshot = await get(ref(database, "GPSS"));
+    if (!snapshot.exists()) {
+      resultsContainer.innerHTML = "❌ لا توجد بيانات مطابقة!";
+      return;
+    }
+
+    let gpsData = snapshot.val();
+
+    let filteredData = Object.keys(gpsData).map(key => ({
+      id: key, ...gpsData[key]
+    })).filter(item =>
+      (!inputs.queryGPS || String(item.docNumberGPS || "").toLowerCase().includes(inputs.queryGPS)) &&
+      (!inputs.queryGPSUser || String(item.employeeNameGPS || "").toLowerCase().includes(inputs.queryGPSUser)) &&
+      (!inputs.queryLocationGPS || String(item.locationGPS || "").toLowerCase().includes(inputs.queryLocationGPS)) &&
+      (!inputs.querydateAddedGPS || String(item.installDateGPS || "").toLowerCase().includes(inputs.querydateAddedGPS)) &&
+      (!inputs.queryCompanySelectGps || String(item.companyCode || "").toLowerCase().includes(inputs.queryCompanySelectGps)) &&
+      (!inputs.queryGpsType || String(item.GPSType || "").toLowerCase().includes(inputs.queryGpsType))
+    );
+
+    if (inputs.generalSearchGPS) {
+      filteredData = filteredData.filter(item =>
+        Object.values(item).some(value =>
+          String(value).toLowerCase().includes(inputs.generalSearchGPS)
+        )
+      );
+    }
+
+    filteredData.sort((a, b) => (parseInt(a.docNumberGPS) || 0) - (parseInt(b.docNumberGPS) || 0));
+
+    renderResultsGPS(filteredData, resultsContainer);
+
+  } catch (err) {
+    resultsContainer.innerHTML = `❌ حدث خطأ أثناء البحث:<br> ${err.message}`;
+  }
+};
+
+function renderResultsGPS(data, resultsContainer) {
+  if (data.length === 0) {
+    resultsContainer.innerHTML = "❌ لم يتم العثور على بيانات";
+    return;
+  }
+
+  let table = document.createElement("table");
+
+  let thead = document.createElement("thead");
+  let headerRow = "<tr>";
+  selectedColumnsGps.forEach(col => headerRow += `<th>${allColumnsGps[col] || col}</th>`);
+  headerRow += "</tr>";
+  thead.innerHTML = headerRow;
+  table.appendChild(thead);
+
+  let tbody = document.createElement("tbody");
+  data.forEach(item => {
+    let row = document.createElement("tr");
+    if (item.deleted) row.style.backgroundColor = "#ffe6e6";
+    let rowHtml = "";
+    selectedColumnsGps.forEach(col => {
+      const val = item[col] ? item[col] : "—";
+      rowHtml += `<td>${val}</td>`;
+    });
+    row.innerHTML = rowHtml;
+    tbody.appendChild(row);
+  });
+  table.appendChild(tbody);
+
+  resultsContainer.innerHTML = ``;
+  resultsContainer.appendChild(table);
+}
+
+const allColumnsGps = {
+  docNumberGPS: "رقم المستند",
+  locationGPS: "الموقع",
+  installDateGPS: "تاريخ التركيب",
+  carLicenseGPS: "رقم السيارة",
+  carTypeGPS: "نوع السيارة",
+  GPSType: "نوع الجهاز",
+  GPSModel: "موديل الجهاز",
+  imeiGPS: "IMEI",
+  employeeNameGPS: "اسم الموظف",
+  lineNumberGPS: "رقم الخط",
+  simNumberGPS: "رقم الشريحة",
+  statusGPS: "الحالة",
+  notesGPS: "ملاحظات",
+  companyCode: "كود الشركة"
+};
+
+let selectedColumnsGps = Object.keys(allColumnsGps);
+
+window.applyColumnFilter = function () {
+  selectedColumnsGps = Array.from(document.querySelectorAll('.columnCheckbox:checked')).map(cb => cb.value);
+  document.getElementById("columnFilterBoxGps").style.display = "none";
+  searchDataGPS();
+}
+
+window.toggleColumnFilter = function () {
+  const box = document.getElementById("columnFilterBoxGps");
+  const container = document.getElementById("columnCheckboxesGps");
+  box.style.display = box.style.display === "none" ? "block" : "none";
+
+  if (container.innerHTML === "") {
+    Object.keys(allColumnsGps).forEach(key => {
+      container.innerHTML += `
+        <label style="display:block;margin:3px 0;">
+          <input type="checkbox" class="columnCheckbox" value="${key}" checked> ${allColumnsGps[key]}
+        </label>
+      `;
+    });
+  }
+}
+
+window.printTableGPS = function () {
+    const resultsContainer = document.getElementById("queryResultsGps");
+    const tableHTML = resultsContainer.innerHTML;
+
+    if (!tableHTML.trim()) {
+      alert("❌ لا يوجد جدول لطباعته.");
+      return;
+    }
+
+    const printWindow = window.open('', '', 'height=600,width=800');
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>طباعة الأجهزة</title>
+                <style>
+                    body { font-family: Arial, sans-serif; direction: rtl; text-align: center; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    th, td { border: 1px solid #000; padding: 6px; font-size: 12px; }
+                    th { background-color: #f0f0f0; }
+                </style>
+            </head>
+            <body>
+                <img src="LOGO_URL_HERE" alt="الشعار" style="height: 100px; margin-bottom: 10px;">
+                ${tableHTML}
+            </body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+};
+
+window.exportToExcelGPS = function () {
+    const table = document.querySelector("#queryResultsGps table");
+    if (!table) {
+        alert("❌ لا يوجد جدول لتصديره!");
+        return;
+    }
+    const workbook = XLSX.utils.table_to_book(table, { sheet: "PC Data" });
+    XLSX.writeFile(workbook, "PC_Data.xlsx");
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////// لاصول ولاهلاك //////////////////////////////////////////////////////////
+// ====== عناصر الواجهة ======
+  const $ = (id)=>document.getElementById(id);
+  const assetIdEl = $("assetId");
+  const assetCodeEl = $("assetCode");
+  const descriptionEl = $("description");
+  const assetCostCenterEl = $("assetCostCenter");
+  const deviceTypeEl = $("deviceType");
+  const linkedDeviceEl = $("linkedDevice");
+  const costEl = $("cost");
+  const residualEl = $("residual");
+  const purchaseDateEl = $("purchaseDate");
+  const usefulLifeEl = $("usefulLife");
+  const depMethodEl = $("depMethod");
+  const depRateEl = $("depRate");
+  const outAccumEl = $("outAccum");
+  const outNBVEl = $("outNBV");
+  const outAsOfEl = $("outAsOf");
+  const filterCostCenterEl = $("filterCostCenter");
+  const filterDeviceTypeEl = $("filterDeviceType");
+  const searchAssetEl = $("searchAsset");
+  const linkedHintEl = $("linkedHint");
+
+function refreshAssetPermissions() {
+  return {
+    AssetSave: localStorage.getItem('AssetSave') === 'true',
+    AssetEdit: localStorage.getItem('AssetEdit') === 'true'
+  };
+}
+
+async function loadCostCentersZ() {
+  const snap = await get(ref(database, "costCenters"));
+
+  assetCostCenterEl.innerHTML = '<option value="">— اختر —</option>';
+  filterCostCenterEl.innerHTML = '<option value="">كل مراكز التكلفة</option>';
+
+  if (snap.exists()) {
+    const arr = [];
+    snap.forEach(ch => {
+      const val = ch.val();
+      arr.push({ code: ch.key, ...val }); // نضيف المفتاح + البيانات
+    });
+
+    // ترتيب بالأكواد تصاعدي
+    arr.sort((a, b) => Number(a.code) - Number(b.code));
+
+    for (const c of arr) {
+      const label = `${c.code} - ${c.name}`;
+      assetCostCenterEl.insertAdjacentHTML("beforeend", `<option value="${c.code}">${label}</option>`);
+      filterCostCenterEl.insertAdjacentHTML("beforeend", `<option value="${c.code}">${label}</option>`);
+    }
+  }
+}
+async function getUsedLinkedCodes() {
+  const snap = await get(ref(database, "fixedAssets"));
+  if (!snap.exists()) return new Set();
+  const used = new Set();
+  snap.forEach(ch => {
+    const v = ch.val();
+    if (v.linkedCode) {
+      used.add(String(v.linkedCode).trim()); // 🔑 نخزنها كنص بدون مسافات
+    }
+  });
+  return used;
+}
+
+async function loadLinkedDevicesFor(type, currentLinked = "") {
+  linkedDeviceEl.innerHTML = '<option value="">— لا يوجد —</option>';
+  let path = null, label = (v) => v;
+
+  if (type === "كمبيوتر") {
+    path = "computers";
+    label = v => `${v.pcNum || ""} - ${v.deviceModel || ""}`;
+  } else if (type === "شاشة") {
+    path = "screens";
+    label = v => `${v.documentNumberScreen || ""} - ${v.screenType || ""}`;
+  } else if (type === "طابعة") {
+    path = "printers";
+    label = v => `${v.doc_number || ""} - ${v.printer_model || ""}`;
+  } else {
+    linkedHintEl.textContent = "اختر 'أخرى' في حال عدم وجود كيان مرتبط.";
+    return;
+  }
+
+  const snap = await get(ref(database, path));
+  if (!snap.exists()) return;
+
+  const used = await getUsedLinkedCodes();
+
+  snap.forEach(ch => {
+    const v = ch.val();
+    const code = String(
+      v.pcNum ?? v.documentNumberScreen ?? v.doc_number ?? v.code ?? ch.key
+    ).trim();
+
+    // ✅ منع ظهور الأجهزة المستخدمة إلا لو هو الحالي
+    if (used.has(code) && code !== currentLinked) {
+      return;
+    }
+
+    linkedDeviceEl.insertAdjacentHTML(
+      "beforeend",
+      `<option value="${code}">${label(v)}</option>`
+    );
+  });
+
+  if (currentLinked) linkedDeviceEl.value = currentLinked;
+}
+
+async function loadDeviceTypes() {
+  const types = ["كمبيوتر", "شاشة", "طابعة", "كاميرا", "راوتر", "خط هاتف", "أخرى"];
+  deviceTypeEl.innerHTML = '<option value="">— اختر نوع الجهاز —</option>';
+  types.forEach(type => {
+    deviceTypeEl.insertAdjacentHTML("beforeend", `<option value="${type}">${type}</option>`);
+  });
+}
+// ====== تحميل البيانات الأولية عند فتح الصفحة ======
+await loadCostCentersZ();
+await loadDeviceTypes();
+await loadLinkedDevicesFor("أخرى"); 
+// ====== تحميل الأصول عند البحث أو التصفية ======
+  deviceTypeEl.addEventListener('change', (e)=>{
+   const type = e.target.value.trim();
+   loadLinkedDevicesFor(type);
+  });
+
+
+  // ====== توليد كود أصل يبدأ من FA-100 ======
+  async function generateAssetCode() {
+    const snap = await get(ref(database, "fixedAssets"));
+    let max = 99; // حتى يكون أول كود FA-100
+    if (snap.exists()) {
+      snap.forEach(ch => {
+        const v = ch.val();
+        // يدعم صيغ FA-100 أو 100 (نأخذ الرقم فقط)
+        const num = parseInt(String(v.assetCode || "").replace(/^\D+/,''));
+        if (!isNaN(num) && num > max) max = num;
+      });
+    }
+    return `FA-${max + 1}`;
+  }
+
+  // ====== حساب نسبة القسط الثابت تلقائيًا ======
+  function updateRate() {
+    const years = parseFloat(usefulLifeEl.value);
+    if (!isNaN(years) && years > 0) {
+      depRateEl.value = (100 / years).toFixed(2);
+    } else {
+      depRateEl.value = "";
+    }
+  }
+  usefulLifeEl.addEventListener('input', updateRate);
+
+// مثال قابل للاستخدام: 'completed' | 'includePartialAsFull' | 'prorated'
+const prorationMode = 'prorated';
+
+function parseDateOnly(dateStr) {
+  if (!dateStr) return null;
+  const [y, m, d] = dateStr.split('-').map(Number);
+  if (!y || isNaN(m) || isNaN(d)) return null;
+  return new Date(y, m - 1, d); // يمنع مشاكل الـ timezone
+}
+
+function daysInMonth(date) {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+}
+
+function monthsElapsedWhole(start, end) {
+  // عدد الأشهر المكتملة (بدون جزئيات)
+  if (end < start) return 0;
+  return (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+}
+
+function monthsWithFraction(start, end) {
+  // عدد الأشهر مع جزء الشهر كنسبة (0..1)
+  if (end < start) return 0;
+  let months = monthsElapsedWhole(start, end);
+  let anchor = new Date(start.getFullYear(), start.getMonth() + months, start.getDate());
+  let diffDays = Math.floor((end - anchor) / (1000 * 60 * 60 * 24));
+  if (diffDays < 0) {
+    months -= 1;
+    anchor = new Date(start.getFullYear(), start.getMonth() + months, start.getDate());
+    diffDays = Math.floor((end - anchor) / (1000 * 60 * 60 * 24));
+  }
+  const dim = daysInMonth(anchor);
+  const fraction = Math.max(0, Math.min(1, diffDays / dim));
+  return months + fraction;
+}
+
+function formatDateLocal(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function round2(v) {
+  return Math.round((v + Number.EPSILON) * 100) / 100;
+}
+
+function calcDepPreview() {
+  const cost = parseFloat(costEl.value) || 0;
+  const residualInput = parseFloat(residualEl.value);
+  const residual = isNaN(residualInput) ? 0 : Math.min(residualInput, cost);
+  const lifeYears = parseFloat(usefulLifeEl.value) || 0;
+  const method = depMethodEl.value;
+  const start = purchaseDateEl.value ? parseDateOnly(purchaseDateEl.value) : null;
+  const today = new Date();
+
+  if (!cost || !lifeYears || !start || method !== 'straight-line') {
+    outAccumEl.textContent = '0.00';
+    outNBVEl.textContent = cost.toFixed(2);
+    outAsOfEl.textContent = '—';
+    return { accum: 0, nbv: cost, asOf: null };
+  }
+
+  // حساب الأشهر طبق الوضع المختار
+  const wholeMonths = monthsElapsedWhole(start, today);
+  let monthsCount;
+  if (prorationMode === 'completed') {
+    monthsCount = Math.max(0, wholeMonths);
+  } else if (prorationMode === 'includePartialAsFull') {
+    // إذا فيه بقايا أيام من الشهر الحالي نعتبره شهرًا كاملاً
+    const anchor = new Date(start.getFullYear(), start.getMonth() + wholeMonths, start.getDate());
+    const hasPartial = (today - anchor) > 0;
+    monthsCount = Math.max(0, wholeMonths + (hasPartial ? 1 : 0));
+  } else { // 'prorated'
+    monthsCount = monthsWithFraction(start, today);
+  }
+
+  const depreciableBase = cost - residual;
+  const totalMonthsLife = lifeYears * 12;
+  if (totalMonthsLife <= 0) {
+    outAccumEl.textContent = '0.00';
+    outNBVEl.textContent = cost.toFixed(2);
+    outAsOfEl.textContent = formatDateLocal(today);
+    return { accum: 0, nbv: cost, asOf: formatDateLocal(today) };
+  }
+
+  const monthly = depreciableBase / totalMonthsLife;
+  let accum = monthly * monthsCount;
+  accum = Math.min(depreciableBase, Math.max(0, round2(accum)));
+  const nbv = Math.max(residual, round2(cost - accum));
+
+  outAccumEl.textContent = accum.toFixed(2);
+  outNBVEl.textContent = nbv.toFixed(2);
+  outAsOfEl.textContent = formatDateLocal(today);
+
+  return { accum, nbv, asOf: formatDateLocal(today) };
+}
+
+// ====== حفظ / تحديث أصل ======
+async function saveAsset() {
+  const { AssetSave, AssetEdit } = refreshAssetPermissions();
+
+  const editingId = assetIdEl.value;
+  if (!editingId && !AssetSave) return alert("❌ ليس لديك صلاحية إضافة أصل جديد.");
+  if (editingId && !AssetEdit) return alert("❌ ليس لديك صلاحية تعديل أصل.");
+
+  // تحقق أساسي
+// تحقق أساسي
+if (!descriptionEl.value.trim() || !assetCostCenterEl.value || !purchaseDateEl.value || !usefulLifeEl.value || !costEl.value) {
+  return alert("⚠️ يرجى ملء الحقول الأساسية (الوصف، مركز التكلفة، التكلفة، تاريخ الشراء، العمر الإنتاجي).");
+}
+
+// ✅ تحقق من أن الجهاز المرتبط تم اختياره
+if (!linkedDeviceEl.value) {
+  return alert("⚠️ يجب اختيار جهاز مرتبط قبل الحفظ.");
+}
+  if (!deviceTypeEl.value) {
+    return alert("⚠️ يرجى اختيار نوع الجهاز.");
+  }
+  if (!purchaseDateEl.value) {
+    return alert("⚠️ يرجى إدخال تاريخ الشراء.");
+  }
+  if (!usefulLifeEl.value || isNaN(parseFloat(usefulLifeEl.value)) || parseFloat(usefulLifeEl.value) <= 0) {
+    return alert("⚠️ يرجى إدخال العمر الإنتاجي بشكل صحيح.");
+  }
+  if (!costEl.value || isNaN(parseFloat(costEl.value)) || parseFloat(costEl.value) <= 0) {
+    return alert("⚠️ يرجى إدخال التكلفة بشكل صحيح.");
+  }
+
+  if (!depMethodEl.value) {
+    return alert("⚠️ يرجى اختيار طريقة الإهلاك.");
+  }
+  if (!depRateEl.value || isNaN(parseFloat(depRateEl.value)) || parseFloat(depRateEl.value) <= 0) {
+    return alert("⚠️ يرجى إدخال نسبة الإهلاك بشكل صحيح.");
+  }
+  if (depMethodEl.value === "straight-line" && (!usefulLifeEl.value || isNaN(parseFloat(usefulLifeEl.value)) || parseFloat(usefulLifeEl.value) <= 0)) {
+    return alert("⚠️ يرجى إدخال العمر الإنتاجي بشكل صحيح.");
+  }
+  if (depMethodEl.value === "declining-balance" && (!depRateEl.value || isNaN(parseFloat(depRateEl.value)) || parseFloat(depRateEl.value) <= 0)) {
+    return alert("⚠️ يرجى إدخال نسبة الإهلاك بشكل صحيح.");
+  }
+
+  // تحقق من الجهاز المرتبط (ما يتكرر)
+  const linked = linkedDeviceEl.value || "";
+  if (linked) {
+    const used = await getUsedLinkedCodes();
+    if (used.has(linked) && !editingId) {
+      return alert("⚠️ هذا الجهاز مرتبط بالفعل بأصل آخر ولا يمكن ربطه مرة ثانية.");
+    }
+    if (editingId) {
+      const snap = await get(ref(database, "fixedAssets"));
+      let linkedByOther = false;
+      snap.forEach(ch => {
+        if (ch.key !== editingId && ch.val().linkedCode === linked) {
+          linkedByOther = true;
+        }
+      });
+      if (linkedByOther) {
+        return alert("⚠️ هذا الجهاز مرتبط بالفعل بأصل آخر ولا يمكن ربطه مرة ثانية.");
+      }
+    }
+  }
+
+  // حساب الكود
+  let code = assetCodeEl.value.trim();
+  if (!code) code = await generateAssetCode();
+
+  // معاينة/حساب الإهلاك الآن
+  const { accum, nbv, asOf } = calcDepPreview();
+
+  const data = {
+    assetCode: code,
+    description: descriptionEl.value.trim(),
+    costCenter: assetCostCenterEl.value,
+    deviceType: deviceTypeEl.value || "أخرى",
+    linkedCode: linked,
+    cost: parseFloat(costEl.value) || 0,
+    residual: parseFloat(residualEl.value) || 0,
+    purchaseDate: purchaseDateEl.value,
+    usefulLife: parseFloat(usefulLifeEl.value) || 0,
+    depreciationMethod: depMethodEl.value,
+    depreciationRate: parseFloat(depRateEl.value) || (100 / (parseFloat(usefulLifeEl.value) || 1)),
+    accumulatedDep: Number(accum.toFixed(2)),
+    netBookValue: Number(nbv.toFixed(2)),
+    lastCalcDate: asOf || null,
+    deleted: false,
+    updatedAt: new Date().toISOString()
+  };
+
+  if (editingId) {
+    await update(ref(database, "fixedAssets/" + editingId), data);
+    alert("✅ تم التحديث");
+  } else {
+    await set(push(ref(database, "fixedAssets")), data);
+    alert("✅ تم الحفظ");
+  }
+
+  clearAssetForm();
+  await loadAssets();
+
+  // ✅ بعد الحفظ → إعادة تحميل الأجهزة حسب النوع الحالي
+  if (deviceTypeEl.value) {
+    await loadLinkedDevicesFor(deviceTypeEl.value);
+  }
+}
+  
+  $("btnSave").addEventListener('click', saveAsset);
+
+// ====== تحميل وعرض الأصول ======
+  async function loadAssets() {
+    const snap = await get(ref(database, "fixedAssets"));
+    const body = $("assetsBody");
+    body.innerHTML = "";
+    const items = [];
+    if (snap.exists()) {
+      snap.forEach(ch => {
+        const v = ch.val();
+        if (!v.deleted) items.push({id: ch.key, ...v});
+      });
+    }
+
+    const qText = (searchAssetEl.value || "").toLowerCase().trim();
+    const fCC = filterCostCenterEl.value;
+    const fType = filterDeviceTypeEl.value;
+
+    const filtered = items.filter(x => {
+      const okText = !qText || (String(x.assetCode).toLowerCase().includes(qText) || String(x.description).toLowerCase().includes(qText));
+      const okCC = !fCC || x.costCenter == fCC;
+      const okType = !fType || x.deviceType == fType;
+      return okText && okCC && okType;
+    });
+
+    filtered.sort((a,b) => {
+      const na = parseInt(String(a.assetCode).replace(/^\D+/,''));
+      const nb = parseInt(String(b.assetCode).replace(/^\D+/,''));
+      return na - nb;
+    });
+
+    for (const x of filtered) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td style="padding:10px;border-bottom:1px solid #f2f2f2">${x.assetCode || ""}</td>
+        <td style="padding:10px;border-bottom:1px solid #f2f2f2">${x.description || ""}</td>
+        <td style="padding:10px;border-bottom:1px solid #f2f2f2">${x.deviceType || ""}</td>
+        <td style="padding:10px;border-bottom:1px solid #f2f2f2">${x.costCenter || ""}</td>
+        <td style="padding:10px;border-bottom:1px solid #f2f2f2">${(x.cost ?? 0).toFixed ? x.cost.toFixed(2) : Number(x.cost||0).toFixed(2)}</td>
+        <td style="padding:10px;border-bottom:1px solid #f2f2f2">${(x.accumulatedDep ?? 0).toFixed ? x.accumulatedDep.toFixed(2) : Number(x.accumulatedDep||0).toFixed(2)}</td>
+        <td style="padding:10px;border-bottom:1px solid #f2f2f2">${(x.netBookValue ?? 0).toFixed ? x.netBookValue.toFixed(2) : Number(x.netBookValue||0).toFixed(2)}</td>
+        <td style="padding:10px;border-bottom:1px solid #f2f2f2">${x.depreciationRate || ""}</td>
+      `;
+      body.appendChild(tr);
+    }
+
+  }
+
+  // ====== تحرير سجل للأصل ======
+  async function editAsset(id) {
+    const snap = await get(ref(database, "fixedAssets/" + id));
+    if (!snap.exists()) return alert("❌ الأصل غير موجود");
+    const v = snap.val();
+
+    assetIdEl.value = id;
+    assetCodeEl.value = v.assetCode || "";
+    descriptionEl.value = v.description || "";
+    assetCostCenterEl.value = v.costCenter || "";
+    deviceTypeEl.value = v.deviceType || "";
+    await loadLinkedDevicesFor(deviceTypeEl.value || "");
+    linkedDeviceEl.value = v.linkedCode || "";
+    costEl.value = v.cost ?? "";
+    residualEl.value = v.residual ?? "";
+    purchaseDateEl.value = v.purchaseDate || "";
+    usefulLifeEl.value = v.usefulLife ?? "";
+    depMethodEl.value = v.depreciationMethod || "straight-line";
+    updateRate();
+    depRateEl.value = v.depreciationRate ?? depRateEl.value;
+
+    outAccumEl.textContent = (v.accumulatedDep ?? 0).toFixed ? v.accumulatedDep.toFixed(2) : Number(v.accumulatedDep||0).toFixed(2);
+    outNBVEl.textContent = (v.netBookValue ?? 0).toFixed ? v.netBookValue.toFixed(2) : Number(v.netBookValue||0).toFixed(2);
+    outAsOfEl.textContent = v.lastCalcDate || "—";
+  }
+
+  // ====== حذف (ناعم) ======
+  async function deleteAsset(id) {
+    const ok = confirm("هل تريد حذف الأصل؟ سيتم وسمه كمحذوف.");
+    if (!ok) return;
+    await update(ref(database, "fixedAssets/" + id), {deleted:true, deletedAt:new Date().toISOString()});
+    await loadAssets();
+  }
+
+  // ====== أحداث الفلاتر/البحث ======
+  $("btnRefreshAssets").addEventListener('click', loadAssets);
+  filterCostCenterEl.addEventListener('change', loadAssets);
+  filterDeviceTypeEl.addEventListener('change', loadAssets);
+  searchAssetEl.addEventListener('input', ()=> {
+    // بحث فوري
+    loadAssets();
+  });
+
+  // ====== تهيئة الصفحة ======
+  async function init() {
+    updateRate();
+    await loadCostCentersZ();
+    await loadAssets();
+
+    // توليد كود تلقائي عند فتح النموذج لأول مرة/عند التفريغ
+    const code = await generateAssetCode();
+    assetCodeEl.value = code;
+  }
+
+  // إنشاء Toast message
+function showToast(message, type = "info", duration = 3000) {
+  let toast = document.createElement("div");
+  toast.textContent = message;
+  toast.style.position = "fixed";
+  toast.style.bottom = "20px";
+  toast.style.left = "50%";
+  toast.style.transform = "translateX(-50%)";
+  toast.style.padding = "10px 20px";
+  toast.style.borderRadius = "8px";
+  toast.style.color = "#fff";
+  toast.style.fontWeight = "bold";
+  toast.style.zIndex = 9999;
+  toast.style.boxShadow = "0 2px 6px rgba(0,0,0,0.3)";
+  
+  if (type === "success") toast.style.backgroundColor = "#4CAF50";
+  else if (type === "error") toast.style.backgroundColor = "#f44336";
+  else if (type === "warning") toast.style.backgroundColor = "#ff9800";
+  else toast.style.backgroundColor = "#2196F3";
+
+  document.body.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.transition = "opacity 0.5s";
+    toast.style.opacity = 0;
+    setTimeout(() => toast.remove(), 500);
+  }, duration);
+}
+
+$("btnCalc").addEventListener('click', calcDepPreview);
+
+  // ====== تفريغ النموذج ======
+  function clearAssetForm() {
+    assetIdEl.value = "";
+    assetCodeEl.value = "";
+    descriptionEl.value = "";
+    assetCostCenterEl.value = "";
+    deviceTypeEl.value = "";
+    linkedDeviceEl.innerHTML = '<option value="">— لا يوجد —</option>';
+    costEl.value = "";
+    residualEl.value = "";
+    purchaseDateEl.value = "";
+    usefulLifeEl.value = "";
+    depRateEl.value = "";
+    outAccumEl.textContent = "0.00";
+    outNBVEl.textContent = "0.00";
+    outAsOfEl.textContent = "—";
+  }
+$("btnClear").addEventListener('click', clearAssetForm);
+
+
 
 </script>
 </head>
@@ -13788,7 +15157,6 @@ body {
     color: var(--text-color);
 }
 
-/* Header */
 .header {
     height: 60px;
     padding: 0 20px;
@@ -13807,7 +15175,6 @@ body {
     border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* Search */
 .search-box {
     padding: 8px 18px;
     border-radius: 30px;
@@ -13825,7 +15192,6 @@ body {
     background-color: rgba(255, 255, 255, 0.8);
 }
 
-/* Sidebar */
 .sidebar {
     position: fixed;
     top: 70px;
@@ -13874,7 +15240,6 @@ body {
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
-/* Content */
 .content {
     padding: 70px 20px 20px;
     width: calc(100% - 230px);
@@ -13887,7 +15252,6 @@ body {
     display: block;
 }
 
-/* Forms */
 .form-container {
     background: var(--main-color);
     padding: 20px;
@@ -13916,7 +15280,6 @@ body {
     margin-bottom: 20px;
 }
 
-/* Labels & Inputs */
 label {
     margin-bottom: 6px;
     font-weight: 500;
@@ -13945,7 +15308,6 @@ input:focus, select:focus {
     grid-column: span 2;
 }
 
-/* Table */
 .table-container {
     max-height: 400px;
     overflow: auto;
@@ -13992,7 +15354,6 @@ td input:focus {
     outline: none;
 }
 
-/* Buttons */
 button {
     background-color: var(--main-color);
     color: var(--text-color);
@@ -14196,6 +15557,43 @@ table thead {
 #columnFilterBoxLine button:hover {
     background-color: #218838;
 }
+
+#columnFilterBoxGps {
+    max-height: 400px;
+    max-width: 300px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border: 1px solid #ddd;
+    background-color: #ffffff;
+    padding: 20px;
+    margin: 10px 0;
+    position: absolute;
+    right: 10px;
+    z-index: 100;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+#columnFilterBoxGps label {
+    display: block;
+    margin: 8px 0;
+    font-size: 14px;
+    color: #333;
+}
+#columnFilterBoxGps button {
+    margin-top: 15px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+    font-size: 14px;
+}
+#columnFilterBoxGps button:hover {
+    background-color: #218838;
+}
 #loginScreen,
 #mainContent {
     display: none;
@@ -14227,7 +15625,6 @@ table thead {
     font-weight: bold;
 }
 
-/* ====== العنوان الرئيسي للدashboard ====== */
 .dashboard-header {
   text-align: center;
   margin-bottom: 30px;
@@ -14250,7 +15647,6 @@ table thead {
   font-size: 15px;
 }
 
-/* ===== توزيع الكروت ===== */
 .chart-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(0px, 3fr));
@@ -14267,7 +15663,7 @@ table thead {
   transform: translateY(-5px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
-/* ===== أنيميشن دخول الكروت ===== */
+
 .chart-card {
   animation: fadeUp 0.6s ease both;
 }
@@ -14313,8 +15709,8 @@ table thead {
 </div>
 
 
-    <div class="sidebar p-3 bg-body-tertiary" id="sidebar">
-      <div class="card mb-3">
+<div class="sidebar p-3 bg-body-tertiary" id="sidebar">
+        <div class="card mb-3">
             <button class="btn btn-info w-100 text-start" data-bs-toggle="collapse" data-bs-target="#computerDropdown">
                 💻 <span class="button-text">خيارات الكمبيوتر</span>
             </button>
@@ -14366,9 +15762,9 @@ table thead {
             <div id="cameraDropdown" class="collapse">
                 <div class="card-body">
                     <ul class="nav nav-pills flex-column">
-                        <li class="nav-item"><a class="nav-link" href="#cameraForm" onclick="showSection('cameraForm')">إضافة كاميرا</a></li>
-                        <li class="nav-item"><a class="nav-link" href="#cameraQuery" onclick="showSection('cameraQuery')">استعلام كاميرا</a></li>
-                        <li class="nav-item"><a class="nav-link" href="#cameraSettings" onclick="showSection('cameraSettings')">إعدادات كاميرا</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#cameraForm" onclick="showSection('cameraForm')">إضافة جهاز</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#cameraQuery" onclick="showSection('cameraQuery')">استعلام جهاز</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#cameraSettings" onclick="showSection('cameraSettings')">اعدادات جهاز</a></li>
                     </ul>
                 </div>
             </div>
@@ -14414,6 +15810,21 @@ table thead {
                         <li><a class="nav-link" href="#lineQuery" onclick="showSection('lineQuery')">استعلام عن الخطوط</a></li>
                         <li><a class="nav-link" href="#lineSettings" onclick="showSection('lineSettings')"> عدادات الخطوط</a></li>
 
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <button class="btn btn-info w-100 text-start" data-bs-toggle="collapse" data-bs-target="#gpsDropdown">
+                🛰️ <span class="button-text">قسم GPS</span>
+            </button>
+            <div id="gpsDropdown" class="collapse ">
+                <div class="card-body">
+                    <ul class="nav nav-pills flex-column">
+                        <li><a class="nav-link" href="#gpsForm" onclick="showSection('gpsForm')"> إضافة جهاز GPS </a></li>
+                        <li><a class="nav-link" href="#gpsQuery" onclick="showSection('gpsQuery')">استعلام GPS</a></li>
+                        <li><a class="nav-link" href="#gpsSettings" onclick="showSection('gpsSettings')"> عدادات GPS</a></li>
                     </ul>
                 </div>
             </div>
@@ -14496,10 +15907,21 @@ table thead {
                 </div>
             </div>
         </div>
-
+        <div class="card mb-3">
+            <button class="btn btn-info w-100 text-start" data-bs-toggle="collapse" data-bs-target="#fixedDropdown">
+              🏢  <span class="button-text"> اداره الاصول </span>
+            </button>
+            <div id="fixedDropdown" class="collapse ">
+                <div class="card-body">
+                    <ul class="nav nav-pills flex-column">
+                      <li><a class="nav-link" href="#fixedAssetsDepreciation" onclick="showSection('fixedAssetsDepreciation')">  الأصول الثابتة والإهلاك </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
         <div class="card mb-3">
             <button class="btn btn-info w-100 text-start" data-bs-toggle="collapse" data-bs-target="#settingsDropdown">
-                ⚙️  اعدادت <span class="button-text"></span>
+                ⚙️ <span class="button-text"> اعدادات النظام  </span>
             </button>
             <div id="settingsDropdown" class="collapse ">
                 <div class="card-body">
@@ -14507,10 +15929,10 @@ table thead {
                         <li><a class="nav-link" href="#PageSettings" onclick="showSection('PageSettings')">   إعدادات الصفحة </a></li>
                         <li><a class="nav-link" href="#definitionCompanies" onclick="showSection('definitionCompanies')">  تعريف الشريكات  </a></li>
                         <li><a class="nav-link" href="#companySettingsForm" onclick="showSection('companySettingsForm')">اعدادت الفاتوره </a></li>
+                        <li><a class="nav-link" href="#costCenters" onclick="showSection('costCenters')">   مراكز التكلفة </a></li>
                         <li><a class="nav-link" href="#addItemForm" onclick="showSection('addItemForm')">إضافة صنف</a></li>
                         <li><a class="nav-link" href="#addARegionForm" onclick="showSection('addARegionForm')">إضافة منطقة</a></li>
                         <li><a class="nav-link" href="#addAResourceForm" onclick="showSection('addAResourceForm')">إضافة مورد</a></li>
-
                     </ul>
                 </div>
             </div>
@@ -14532,8 +15954,353 @@ table thead {
                </div>
            </div>
         </div>
-       
+</div>
+
+<div id="gpsForm"  class="content">
+  <div class="card">
+    <div class="card-header text-center">
+       إدارة أجهزة GPS
+    </div>
+    <div class="grid-container">
+      <div class="grid-item">
+        <label for="docNumberGPS">رقم مستند الجهاز </label>
+        <input type="text" id="docNumberGPS" name="docNumberGPS" required placeholder="أدخل رقم مستند الجهاز">
+
+        <label for="companySelect2">اختر الشركة:</label>
+        <select id="companySelect2" class="form-control"></select>
+        <input type="hidden" id="selectedCompanyCodeGps">
+
+        <label for="locationGPS">موقع الجهاز</label>
+        <select id="locationGPS" name="locationGPS" required>
+          <option value="">- Location -</option>
+        </select>
+      </div>
+
+      <div class="grid-item">
+        <label for="installDateGPS">تاريخ التركيب</label>
+        <input type="date" id="installDateGPS" class="form-control">
+
+        <label for="carLicenseGPS">رخصه المركبه</label>
+        <input type="text" id="carLicenseGPS" class="form-control" placeholder="أدخل رقم لوحة المركبة">
+
+        <label for="carTypeGPS">نوع المركبة</label>
+        <input type="text" id="carTypeGPS" class="form-control" placeholder="أدخل نوع المركبة">
+      </div>
+
+      <div class="grid-item">
+        <label for="imeiGPS">IMEI</label>
+        <input type="text" id="imeiGPS" class="form-control" placeholder="أدخل IMEI">
+
+        <label for="GPSType">نوع الجهاز</label>
+        <select id="GPSType">
+          <option value="">-- Select the device --</option>
+        </select>
+
+        <label for="GPSModel">موديل الجهاز</label>
+        <select id="GPSModel">
+          <option value="">-- Device type --</option>
+        </select>
+      </div>
+
+      <div class="grid-item">
+        <label for="employeeNameGPS">اسم الموظف المسؤول</label>
+        <input type="text" id="employeeNameGPS" class="form-control" placeholder="مثال: م/ أحمد علي">
+
+        <label for="lineNumberGPS">رقم الخط</label>
+        <input type="text" id="lineNumberGPS" class="form-control" placeholder="أدخل رقم الخط">
+
+        <label for="simNumberGPS">رقم الشريحة (SIM)</label>
+        <input type="text" id="simNumberGPS" class="form-control" placeholder="أدخل رقم الشريحة">
+      </div>
+
+      <div class="grid-item">
+        <label for="statusGPS">الحالة</label>
+        <select id="statusGPS" class="form-select">
+          <option value="active">نشط</option>
+          <option value="inactive">غير نشط</option>
+          <option value="maintenance">صيانة</option>
+        </select>
+      </div>
+
+      <div class="grid-item">
+        <label for="notesGPS">ملاحظات</label>
+        <textarea id="notesGPS" class="form-control" rows="3" placeholder="أدخل أي ملاحظات إضافية..."></textarea>
+      </div>
+
+    </div>
+    <button onclick="saveDataGPS()">💾 حفظ</button>
   </div>
+</div>
+
+
+<div id="gpsQuery" class="content" style="display: none;">
+    <div class="card">
+        <div class="card-header text-center">
+          البحث عن جهاز GPS
+        </div>
+        <div class="grid-container">
+
+          <div class="grid-item">
+            <label for="queryCompanySelectGps">اختر الشركة:</label>
+            <select id="queryCompanySelectGps" class="form-control"></select>
+            <input type="hidden" id="selectedCompanyCodeGps">
+          </div>
+            <div class="grid-item">
+                <label>: تاريخ </label>
+                <input type="date" id="querydateAddedGPS">
+            </div>
+            <div class="grid-item">
+                <label>: رقم مستند الجهاز </label>
+                <input type="text" id="queryGPS">
+            </div>
+            <div class="grid-item">
+                <label>:  المستخدم  </label>
+                <input type="text" id="queryGPSUser">
+            </div>
+            <div class="grid-item">
+                <label> :  نوع الجهاز </label>
+                <select id="queryGpsType">
+                    <option value="">-- Select the device --</option>
+                  </select>
+            </div>
+            <div class="grid-item">
+                <label>: موقع الجهاز  </label>
+                <select id="queryLocationGPS" name="Location" required>
+                    <option value="">- Location -</option>
+                </select>
+            </div>
+        </div>
+    </div>
+       <hr>
+    <div class="card">
+        <div class="toolbar">
+            <div class="button-group">              
+               <button onclick="printTableGPS()">🖨️ طباعة</button>
+               <button onclick="exportToExcelGPS()">📥 تحميل كملف Excel</button>
+               <button id="toggleColumnBtn" onclick="toggleColumnFilter()">🔽 اختيار الأعمدة</button>
+               <button onclick="searchDataGPS()">🔍 بحث</button>
+            </div>
+            <div class="search-box">
+                <label for="generalSearchGPS">بحث : </label>
+                <input type="text" id="generalSearchGPS" placeholder="اكتب كلمة للبحث..." oninput="searchData()" style="width: 100%; padding: 6px;">
+            </div>
+            <div id="columnFilterBoxGps" style="display: none;">
+                <div id="columnCheckboxesGps"></div>
+                <button onclick="applyColumnFilterGPS()">✔ تطبيق</button>
+            </div>
+        </div>     
+        <div id="queryResultsGps" style="overflow-y: auto; height: 400px; border: 1px solid #cccccc00; padding: 10px; margin-top: 10px;"></div>
+    </div>
+</div>
+
+<div id="gpsSettings" class="content" style="display: none;">
+
+    <div class="card mb-3"> 
+        <div class="card-header text-center">
+           GPS إضافة نوع جهاز وموديلات
+        </div>
+        <label for="GPSTypeInput">نوع الجهاز:</label>
+        <input type="text" id="GPSTypeInput" placeholder="مثال: كمبيوتر مكتبي">
+
+        <label for="GPSModelsInput">الموديلات (افصل بينها بفاصلة):</label>
+        <input type="text" id="GPSModelsInput" placeholder="مثال: Dell, HP, Lenovo">
+        <hr>
+        <button onclick="addGPSData()">💾 حفظ الإعدادات</button>
+    
+        <div class="card mb-3"> 
+               
+            <div class="card-header text-center" id="createUserTitle">
+                أنواع الأجهزة والموديلات 
+            </div>
+
+            <table id="GPSTable">
+                <thead>
+                    <tr>
+                        <th>نوع الجهاز</th>
+                        <th>الموديلات</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="content" id="fixedAssetsDepreciation">
+  <div class="card">
+    <div class="card-header text-center">الأصول الثابتة والإهلاك</div> 
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+      <input id="searchAsset" placeholder="بحث (الكود/الوصف)..." style="padding:8px 10px;flex:1;min-width:180px;border:1px solid #ddd;border-radius:8px">
+      <select id="filterCostCenter" style="padding:8px 10px;border:1px solid #ddd;border-radius:8px;min-width:220px">
+        <option value="">كل مراكز التكلفة</option>
+      </select>
+      <select id="filterDeviceType" style="padding:8px 10px;border:1px solid #ddd;border-radius:8px;min-width:180px">
+        <option value="">كل الأنواع</option>
+        <option>كمبيوتر</option>
+        <option>شاشة</option>
+        <option>طابعة</option>
+        <option>أخرى</option>
+      </select>
+      <button id="btnRefreshAssets" style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;background:#fafafa;cursor:pointer">تحديث</button>
+    </div>
+
+    <form id="assetForm" onsubmit="return false" style="background:#fff;border:1px solid #eee;border-radius:12px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)">
+      <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:12px">
+        <input id="assetId" type="hidden"> <!-- لحفظ مفتاح السجل عند التعديل -->
+
+        <div style="grid-column:span 3">
+          <label>كود الأصل</label>
+          <input id="assetCode" placeholder="FA-100 (تلقائي)" 
+          style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px">
+        </div>
+
+        <div style="grid-column:span 5">
+          <label>الوصف</label>
+          <input id="description" placeholder="مثال: كمبيوتر HP Core i7"
+          style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px">
+        </div>
+
+        <div style="grid-column:span 4">
+          <label>مركز التكلفة</label>
+          <select id="assetCostCenter" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px">
+            <option value="">— اختر —</option>
+          </select>
+        </div>
+
+        <div style="grid-column:span 3">
+          <label>نوع الأصل</label>
+          <select id="deviceType" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px">
+            <option value="">— اختر —</option>
+            <option>كمبيوتر</option>
+            <option>شاشة</option>
+            <option>طابعة</option>
+            <option>أخرى</option>
+          </select>
+        </div>
+
+        <div style="grid-column:span 4">
+          <label>جهاز مرتبط</label>
+          <select id="linkedDevice" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px">
+            <option value="">— لا يوجد —</option>
+          </select>
+          <small id="linkedHint" style="color:#777">سيتم تحميل الأجهزة حسب النوع</small>
+        </div>
+
+        <div style="grid-column:span 2">
+          <label>التكلفة (جنيه)</label>
+          <input id="cost" type="number" step="0.01" min="0" placeholder="0.00"
+          style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px">
+        </div>
+
+        <div style="grid-column:span 2">
+          <label>قيمة متبقية (اختياري)</label>
+          <input id="residual" type="number" step="0.01" min="0" placeholder="0.00"
+          style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px">
+        </div>
+
+        <div style="grid-column:span 3">
+          <label>تاريخ الشراء</label>
+          <input id="purchaseDate" type="date"
+          style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px">
+        </div>
+
+        <div style="grid-column:span 2">
+          <label>العمر الإنتاجي (سنوات)</label>
+          <input id="usefulLife" type="number" min="1" placeholder="5"
+          style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px">
+        </div>
+
+        <div style="grid-column:span 2">
+          <label>طريقة الإهلاك</label>
+          <select id="depMethod" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px">
+            <option value="straight-line" selected>القسط الثابت</option>
+          </select>
+        </div>
+
+        <div style="grid-column:span 2">
+          <label>نسبة سنوية (٪)</label>
+          <input id="depRate" type="number" min="0" step="0.01" placeholder="يُحسب تلقائياً"
+          style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px" readonly>
+        </div>
+
+        <div style="grid-column:span 12;display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+          <button id="btnCalc" type="button" style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;cursor:pointer;background:#f6f6f6">حساب الإهلاك الآن</button>
+          <button id="btnSave" type="button" style="padding:8px 12px;border:1px solid #1a7f37;border-radius:8px;cursor:pointer;background:#1f8f42;color:#fff">حفظ / تحديث</button>
+          <button id="btnClear" type="button" style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;cursor:pointer;background:#fafafa">تفريغ</button>
+        </div>
+
+        <div style="grid-column:span 12;display:flex;gap:16px;flex-wrap:wrap;margin-top:6px;color:#444">
+          <div>مجمع الإهلاك: <b id="outAccum">0.00</b></div>
+          <div>القيمة الدفترية: <b id="outNBV">0.00</b></div>
+          <div>حتى تاريخ: <b id="outAsOf">—</b></div>
+        </div>
+      </div>
+    </form>
+
+    <div style="margin-top:14px;border:1px solid #eee;border-radius:12px;overflow:auto">
+      <table id="assetsTable" style="width:100%;border-collapse:collapse;min-width:880px">
+        <thead style="background:#fafafa">
+          <tr>
+            <th style="text-align:right;padding:10px;border-bottom:1px solid #eee">الكود</th>
+            <th style="text-align:right;padding:10px;border-bottom:1px solid #eee">الوصف</th>
+            <th style="text-align:right;padding:10px;border-bottom:1px solid #eee">النوع</th>
+            <th style="text-align:right;padding:10px;border-bottom:1px solid #eee">مركز التكلفة</th>
+            <th style="text-align:right;padding:10px;border-bottom:1px solid #eee">التكلفة</th>
+            <th style="text-align:right;padding:10px;border-bottom:1px solid #eee">مجمع الإهلاك</th>
+            <th style="text-align:right;padding:10px;border-bottom:1px solid #eee">القيمة الدفترية</th>
+            <th style="text-align:right;padding:10px;border-bottom:1px solid #eee">معدل الإهلاك</th>
+
+          </tr>
+        </thead>
+        <tbody id="assetsBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="content" id="costCenters">
+  <div class="card">
+    <div class="card-header text-center">تكويد مراكز التكلفة</div> 
+    <div class="card">
+
+      <div style="display:flex; gap:20px;">
+        <div style="flex:1;">
+          <div class="grid-item">
+            <label>رقم المركز:</label>
+            <input type="text" id="costCenterCode" readonly><br>
+          </div>
+
+          <div class="grid-item">
+            <label>اسم المركز:</label>
+            <input type="text" id="costCenterName"><br>
+          </div>
+
+          <div class="grid-item">
+            <label>المستوى:</label>
+            <input type="number" id="costCenterLevel" readonly><br>
+          </div>
+
+          <div class="grid-item">
+            <label>المركز الرئيسي:</label>
+            <select id="parentCostCenter"></select><br>
+          </div>
+          <div class="grid-item">
+            <label>الوصف:</label>
+            <input type="text" id="costCenterDesc"><br>
+          </div>
+
+          <button onclick="window.saveCostCenter()">💾 حفظ</button>
+        </div>
+
+        <div style="flex:2; border:1px solid #ccc; padding:10px; max-height:400px; overflow:auto;">
+          <h3>📂 شجرة مراكز التكلفة</h3>
+          <ul id="costCenterTree"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="content active" id="Dashboard">
   <div class="card">
     <div class="card-header text-center">📊 Dashboard</div>  
@@ -14581,7 +16348,7 @@ table thead {
 <div id="computerForm" class="content" style="display: none;">
     <div class="card">
         <div class="card-header text-center">
-           Add computer data
+            إضافة جهاز كمبيوتر
         </div>
     <div class="grid-container">
  
@@ -14594,17 +16361,17 @@ table thead {
 
 
         <div class="grid-item">
-            <label>: PC NUM</label>
+            <label>: رقم مستند الجهاز  </label>
             <input type="number" id="pcNum">
         </div>
 
         <div class="grid-item">
-            <label >: Date</label>
+            <label >: تاريخ </label>
             <input type="date" id="dateAdded">
         </div>
 
         <div class="grid-item">
-            <label>: Device status</label>
+            <label>: حاله الجهاز </label>
             <select id="pcStatus">
               <option value="">  - status -</option>
                 <option value="In Services">In Services</option>
@@ -14616,29 +16383,29 @@ table thead {
 
        
         <div class="grid-item">
-            <label>: PC LOCATION</label>
+            <label>: موقع الجهاز  </label>
             <select id="pcLocation" name="pcLocation" required>
                 <option value="">  - Location -</option>
             </select>
         </div>
 
         <div class="grid-item">
-            <label> : PC USER</label>
+            <label> : مستخدم الجهاز  </label>
             <input type="text" id="pcUser">
             
         </div>
         <div class="grid-item">
-            <label for="deviceType">: Select the device</label>
+            <label for="deviceType">: نوع الجهاز </label>
              <select id="deviceType">
               <option value="">-- Select the device --</option>
             </select>
         </div>
         
         <div class="grid-item">
-       <label for="deviceModel">: Sub device type</label>
-    <select id="deviceModel">
-        <option value="">-- Device type --</option>
-    </select>
+          <label for="deviceModel">:  موديل </label>
+          <select id="deviceModel">
+             <option value="">-- Device type --</option>
+          </select>
         </div>
         <div class="grid-item full-width">
         <div class="card">
@@ -14663,21 +16430,21 @@ table thead {
 
     </table>
     <div class="grid-item">
-    <label>: NOTE</label>
+    <label>: ملاحظات </label>
     <input type="text" id="note">
     </div>
 </div>
     </div>
     </div>
     <hr>
-     <button onclick="saveData()">💾 Save</button>
+     <button onclick="saveData()">💾 حفظ مستند الجهاز </button>
 </div>
 </div>
 
 <div id="computerQuery" class="content" style="display: none;">
     <div class="card">
         <div class="card-header text-center">
-            البحث عن جهاز
+          البحث عن جهاز كمبيوتر او لابتوب
         </div>
         <div class="grid-container">
 
@@ -14687,27 +16454,25 @@ table thead {
             <input type="hidden" id="selectedCompanyCode">
           </div>
             <div class="grid-item">
-                <label>: date</label>
+                <label>: تاريخ </label>
                 <input type="date" id="querydateAdded">
             </div>
             <div class="grid-item">
-                <label>: Device number</label>
+                <label>: رقم مستند الجهاز </label>
                 <input type="text" id="queryPcNum">
             </div>
             <div class="grid-item">
-                <label>: user name </label>
+                <label>:  المستخدم  </label>
                 <input type="text" id="queryPcUser">
             </div>
             <div class="grid-item">
-                <label> : DeviceTyp</label>
+                <label> :  نوع الجهاز </label>
                 <select id="queryDeviceType">
                     <option value="">-- Select the device --</option>
-                    <option value=" Desktop computer"> Desktop computer </option>
-                    <option value="Laptop">Laptop</option>
-               </select>
+                  </select>
             </div>
             <div class="grid-item">
-                <label>: PcLocation </label>
+                <label>: موقع الجهاز  </label>
                 <select id="queryPcLocation" name="Location" required>
                     <option value="">- Location -</option>
                 </select>
@@ -14721,10 +16486,10 @@ table thead {
                <button onclick="printTable()">🖨️ طباعة</button>
                <button onclick="exportToExcel()">📥 تحميل كملف Excel</button>
                <button id="toggleColumnBtn" onclick="toggleColumnFilter()">🔽 اختيار الأعمدة</button>
-               <button onclick="searchData()">🔍 تحديث</button>
+               <button onclick="searchData()">🔍 بحث</button>
             </div>
             <div class="search-box">
-                <label for="generalSearch">Search: </label>
+                <label for="generalSearch">بحث : </label>
                 <input type="text" id="generalSearch" placeholder="اكتب كلمة للبحث..." oninput="searchData()" style="width: 100%; padding: 6px;">
             </div>
             <div id="columnFilterBox" style="display: none;">
@@ -14739,8 +16504,8 @@ table thead {
 <div id="computerSettings" class="content" style="display: none;">
 
     <div class="card mb-3"> 
-        <div class="card-header text-center" id="createUserTitle">
-           إضافة نوع جهاز وموديلات
+        <div class="card-header text-center">
+           PC إضافة نوع جهاز وموديلات
         </div>
         <label for="deviceTypeInput">نوع الجهاز:</label>
         <input type="text" id="deviceTypeInput" placeholder="مثال: كمبيوتر مكتبي">
@@ -14748,7 +16513,7 @@ table thead {
         <label for="deviceModelsInput">الموديلات (افصل بينها بفاصلة):</label>
         <input type="text" id="deviceModelsInput" placeholder="مثال: Dell, HP, Lenovo">
         <hr>
-        <button onclick="addDeviceData()">إضافة</button>
+        <button onclick="addDeviceData()">💾 حفظ الإعدادات</button>
     
         <div class="card mb-3"> 
                
@@ -14780,7 +16545,7 @@ table thead {
         <label for="companySelectPhone">اختر الشركة:</label>
         <select id="companySelectPhone" class="form-control"></select>
         <input type="hidden" id="selectedCompanyCodePhone">
-        <label for="documentNumber">  رقم مستند الهاتف :</label>
+        <label for="documentNumber">  رقم مستند الجهاز:</label>
         <input type="number" id="documentNumberPhone" name="documentNumber" required>
         <label for="employeeName"> اسم الموظف:</label>
         <input type="text" id="employeeNamePhone" name="employeeName" required>
@@ -14863,7 +16628,7 @@ table thead {
           </div>
 
             <div class="grid-item">
-            <label for="searchDocumentNumber"> رقم مستند الهاتف:</label>
+            <label for="searchDocumentNumber"> رقم مستند الجهاز:</label>
             <input type="text" id="searchDocumentNumber" placeholder="أدخل رقم المستند">
             </div>
             <div class="grid-item">
@@ -14962,7 +16727,7 @@ table thead {
             <select id="companySelectLine" class="form-control"></select>
             <input type="hidden" id="selectedCompanyCodeLine">
 
-          <label for="documentNumber">رقم مستند الخط:</label>
+          <label for="documentNumber">رقم مستند الجهاز:</label>
           <input type="number" id="documentNumberLine" name="documentNumber" required>
 
           <label for="employeeName">اسم الموظف:</label>
@@ -15069,7 +16834,7 @@ table thead {
           </div>
 
             <div class="grid-item">
-                <label for=""> رقم مستند الخط:</label>
+                <label for=""> رقم مستند الجهاز:</label>
                 <input type="text" id="documentNumberSearchLine" placeholder="أدخل رقم المستند">
                 <label for="searchDatePhone"> التاريخ:</label>
                 <input type="date" id="searchDateLine">
@@ -15144,7 +16909,7 @@ table thead {
                 <input type="hidden" id="selectedCompanyCodeRouter">
 
 
-                <label for="docNumberRouter">رقم المستند</label>
+                <label for="docNumberRouter">: رقم مستند الجهاز </label>
                 <input type="text" id="docNumberRouter" name="docNumber" required>
 
                 <label for="date">التاريخ</label>
@@ -15287,7 +17052,7 @@ table thead {
           </div>
 
             <div class="grid-item">
-            <label for="searchDocumentNumber"> رقم مستند الرواتر :</label>
+            <label for="searchDocumentNumber"> : رقم مستند الجهاز</label>
             <input type="text" id="searchDocNumRouter" placeholder="أدخل رقم المستند">
             </div>
             <div class="grid-item">
@@ -15364,7 +17129,7 @@ table thead {
                <select id="screenCompanySelect" class="form-control"></select>
                <input type="hidden" id="selectedCompanyCodeScreen">
 
-                <label for="documentNumberScreen">رقم المستند:</label>
+                <label for="documentNumberScreen">: رقم مستند الجهاز</label>
                 <input type="text" id="documentNumberScreen" name="documentNumberScreen">
             </div>
             <div class="grid-item">
@@ -15460,7 +17225,7 @@ table thead {
                 <input type="date" id="querydateAddedScreen">
             </div>
             <div class="grid-item">
-                <label>: screen number</label>
+                <label>: رقم مستند الجهاز</label>
                 <input type="text" id="queryScreenNum">
             </div>
             <div class="grid-item">
@@ -15549,7 +17314,7 @@ table thead {
               <select id="printerCompanySelect" class="form-control"></select>
               <input type="hidden" id="selectedCompanyCodePrinter">
 
-              <label for="doc_number">رقم المستند</label>
+              <label for="doc_number">: رقم مستند الجهاز</label>
               <input type="text" id="doc_number" name="doc_number" required>
 
               <label for="doc_date">تاريخ الإدخال</label>
@@ -15626,7 +17391,7 @@ table thead {
 
 
             <div class="grid-item">
-            <label for="filter_doc_number">رقم المستند:</label>
+            <label for="filter_doc_number">: رقم مستند الجهاز</label>
             <input type="number" id="filter_doc_number">
            </div>
 
@@ -15730,7 +17495,7 @@ table thead {
             </div>
 
             <div class="grid-item">
-                <label for="documentNumberCamera">رقم المستند:</label>
+                <label for="documentNumberCamera">: رقم مستند الجهاز</label>
                 <input type="text" id="documentNumberCamera" name="documentNumberCamera" required>
                 
                 <label for="cameraLocation">الموقع:</label>
@@ -15814,7 +17579,7 @@ table thead {
 
 
             <div class="grid-item">
-            <label for="filter_doc_number_camera">رقم المستند:</label>
+            <label for="filter_doc_number_camera">: رقم مستند الجهاز</label>
             <input type="number" id="filter_doc_number_camera">
            </div>
 
@@ -15854,8 +17619,9 @@ table thead {
                     <button onclick="exportToExcelCamera()">📥 تحميل كملف Excel</button>
                     <button onclick="searchCamera()">🔍 تحديث</button>
                 </div>
-                <div  class="search-box" >                     <label for="generalSearchPrint">Search: </label>
-                    <input type="text" id="generalSearchCamera" placeholder="اكتب كلمة للبحث..." oninput="searchCamera()" style="width: 100%; padding: 6px;">
+                <div  class="search-box" >   
+                  <label for="generalSearchPrint">Search: </label>
+                  <input type="text" id="generalSearchCamera" placeholder="اكتب كلمة للبحث..." oninput="searchCamera()" style="width: 100%; padding: 6px;">
                 </div>
             </div>
             <div id="resultsTableCamera" style="overflow-y: auto; height: 400px; border: 1px solid #ccc; padding: 10px; margin-top: 10px;"></div>
@@ -18130,60 +19896,107 @@ let currentLang = 'ar';
 
 function toggleLanguage() {
   currentLang = currentLang === 'ar' ? 'en' : 'ar';
+  applyLanguage();
+}
 
-  const textMap = {
-    buttons: {
-      'logout()': ['تسجيل الخروج', 'Logout'],
-      'fetchData()': ['🔄 تحديث', '🔄 Refresh'],
-      'toggleSidebar()': ['☰ القائمة', '☰ Menu'],
-    },
-   
-    navLinks: {
-      'إضافة جهاز': 'Add Device',
-      'استعلام جهاز': 'Device Query',
-      'إعدادات': 'Settings',
-      'إضافة خط': 'Add a line',
-      'إضافة جهاز': 'Add device',
-      'استعلام عن الخطوط': 'Fonts inquiry',
-      'طلب شراء': 'Purchase Order',
-      'استعلام طلب شراء': 'Order Query',
-      'تعديل طلب الشراء': 'Edit Order',
-      'طلب موافقة تسليم': 'Delivery Approval',
-      'استعلام طلب موافقة تسليم': 'Delivery Query',
-      'تعديل طلب موافقة تسليم': 'Edit Delivery',
-      'إضافة طلب صيانة': 'Add Maintenance',
-      'استعلام عن طلب الصيانة': 'Maintenance Query',
-      'تعديل طلب الصيانة': 'Edit Maintenance',
-      'إذن إضافة': 'Add Permission',
-      'استعلام عن إذن إضافة': 'Add Query',
-      'إذن صرف': 'Disbursement',
-      'استعلام عن إذن صرف': 'Disbursement Query',
-      'استعلام عن المخازن': 'Store Inventory',
-      'إضافة عهده مؤقته': 'Add Temporary Custody',
-      'استعلامات عن عهد مؤقته': 'Temporary Queries',
-      'تعديل عن عهد مؤقته': 'Edit Temporary',
-      'استعلام عن عهده موظف': 'Employee Custody',
-      'إنشاء مستخدم': 'Create User',
-      'تعديل مستخدم': 'Edit User',
-      'إضافة صنف': 'Add Item',
-      'إضافة منطقة': 'Add Region',
-      'إضافة مورد': 'Add Supplier'
-    },
-    sections: {
-      'خيارات الكمبيوتر': 'Computer Options',
-      'خيارات الهاتف': 'Phone Options',
-      'خيارات الطباعات': 'Printer Options',
-      'خيارات الرواتر': 'Router Options',
-      'إدارة الخطوط': 'Line Management',
-      'طلب شراء': 'Purchase Request',
-      'طلب موافقة تسليم': 'Delivery Approval',
-      'إدارة طلب الصيانة': 'Maintenance Requests',
-      'إدارة مخازن': 'Inventory Management',
-      'عهده مؤقته': 'Temporary Custody',
-      'إعدادات المستخدم': 'User Settings',
-      'Settings': 'Settings',
-    }
-  };
+// خرطة النصوص (زود أو عدّل براحتك)
+const textMap = {
+  buttons: {
+    "fetchData()": ["🔄 تحديث", "🔄 Refresh"],
+    "deleteDocument()": ["🗑️ حذف", "🗑️ Delete"],
+    "changePassword()": ["🔑 تغيير كلمة المرور", "🔑 Change password"],
+    "logout()": ["🔓 تسجيل الخروج", "🔓 Log out"],
+    "showSection('Dashboard')": ["🏠 الرئيسية", "🏠 Home"], 
+  },
+
+  navLinks: {
+    'إضافة جهاز': 'Add Device',
+    'استعلام جهاز': 'Device Query',
+    'اعدادات جهاز': 'Device Settings',
+    'إضافة خط': 'Add Line',
+    'استعلام عن الخطوط': 'Line Query',
+    'عدادات الخطوط': 'Line Settings',
+    'طلب شراء': 'Purchase Order',
+    'استعلام طلب شراء': 'Order Query',
+    'تعديل طلب الشراء': 'Edit Order',
+    'طلب موافقة تسليم': 'Delivery Approval',
+    'استعلام طلب موافقة تسليم': 'Delivery Query',
+    'تعديل طلب موافقة تسليم': 'Edit Delivery',
+    'إضافة طلب صيانة': 'Add Maintenance',
+    'استعلام عن طلب الصيانة': 'Maintenance Query',
+    'تعديل طلب الصيانة': 'Edit Maintenance',
+    'إذن إضافة': 'Add Permission',
+    'استعلام عن إذن إضافة': 'Add Permission Query',
+    'إذن صرف': 'Disbursement',
+    'استعلام عن إذن صرف': 'Disbursement Query',
+    'استعلام عن المخازن': 'Store Inventory',
+    'إضافة عهده مؤقته': 'Add Temporary Custody',
+    'استعلامات عن عهد مؤقته': 'Temporary Custody Queries',
+    'تعديل عن عهد مؤقته': 'Edit Temporary Custody',
+    'استعلام عن عهده موظف': 'Employee Custody',
+    'إنشاء مستخدم': 'Create User',
+    'تعديل بيانات مستخدم': 'Edit User',
+    'إدارة الصلاحيات': 'Power Management',
+    'إعدادات الصفحة': 'Page Settings',
+    'تعريف الشريكات': 'Company Definition',
+    'اعدادت الفاتوره': 'Invoice Settings',
+    'إضافة صنف': 'Add Item',
+    'إضافة منطقة': 'Add Region',
+    'إضافة مورد': 'Add Supplier'
+  },
+
+  sections: {
+    'الإحصائيات المجمعة': 'Combined Statistics',
+    'الإحصائيات حسب الموقع': 'Statistics by Location',
+    'الإحصائيات حسب الصنف': 'Statistics by Item',
+    'إعدادات الصفحة': 'Page Settings',
+    'اسم الصفحة:': 'Page Name:',
+    'شعار الصفحة (لوجو):': 'Page Logo:',
+    '💾 حفظ الإعدادات': '💾 Save Settings',
+    'إضافة جهاز كمبيوتر': 'Add Computer',
+    'اختر الشركة:': 'Select Company:',
+    ': رقم مستند الجهاز': 'Device Document No:',
+    ': تاريخ': 'Date:',
+    ': حاله الجهاز': 'Device Status:',
+    ': موقع الجهاز': 'Device Location:',
+    ': مستخدم الجهاز': 'Device User:',
+    ': نوع الجهاز': 'Device Type:',
+    ':  موديل': 'Model:',
+    'PC CONFIGURATION': 'PC CONFIGURATION',
+    ': ملاحظات': 'Notes:',
+    ':  المستخدم ' : ':user',
+    '🖨️ طباعة' : '🖨️ Print',
+    '📥 تحميل كملف Excel' : '📥 Download as an Excel file ',
+    ' 🔽 اختيار الأعمدة' : '🔽 Select columns ',
+    '🔍 بحث' : ' 🔍 Search ',
+    'بحث :':'research :',
+    'PC إضافة نوع جهاز وموديلات': 'PC Add device type and models',
+    'الموديلات (افصل بينها بفاصلة):':' Models (separate by comma):',
+    'البحث عن جهاز كمبيوتر او لابتوب':'Search for a computer or laptop',
+    'أنواع الأجهزة والموديلات' : 'Device types and models',
+    'الموديلات' : 'Models',
+    'نوع الجهاز' : 'Device type',
+    '💾 حفظ مستند الجهاز': '💾 Save Device Document'
+
+  },
+
+  placeholders: {
+    'username': ['اسم المستخدم', 'Username'],
+    'password': ['كلمة المرور', 'Password'],
+  }
+};
+
+const normalize = s => (s || '')
+  .replace(/\s+/g, ' ')
+  .replace(/[؛:]/g, '')
+  .trim();
+
+const sectionPairs = Object.entries(textMap.sections).map(([ar, en]) => ({
+  ar, en, nar: normalize(ar), nen: normalize(en)
+}));
+
+function applyLanguage() {
+  document.documentElement.lang = currentLang;
 
   Object.entries(textMap.buttons).forEach(([fn, [ar, en]]) => {
     const btn = document.querySelector(`button[onclick="${fn}"]`);
@@ -18191,27 +20004,44 @@ function toggleLanguage() {
   });
 
   document.querySelectorAll('input[placeholder]').forEach(input => {
-    input.placeholder = currentLang === 'ar' ? textMap.placeholders['input[placeholder]'][0] : textMap.placeholders['input[placeholder]'][1];
+    const key = input.getAttribute('name') || input.id; 
+    if (textMap.placeholders[key]) {
+      input.placeholder = currentLang === 'ar'
+        ? textMap.placeholders[key][0]
+        : textMap.placeholders[key][1];
+    }
   });
 
-  document.querySelectorAll('.button-text').forEach(span => {
-    const text = span.textContent.trim();
-    Object.entries(textMap.sections).forEach(([ar, en]) => {
-      if (currentLang === 'ar' && text === en) span.textContent = ar;
-      else if (currentLang === 'en' && text === ar) span.textContent = en;
-    });
+  const sectionSelectors = 'h1,h2,h3,h4,.card-header,label,th,button,#saveButton';
+  document.querySelectorAll(sectionSelectors).forEach(el => {
+    const orig = (el.textContent || '').trim();
+    const nt = normalize(orig);
+    const hit = sectionPairs.find(p => p.nar === nt || p.nen === nt);
+    if (hit) {
+      el.textContent = currentLang === 'ar' ? hit.ar : hit.en;
+    }
   });
 
   document.querySelectorAll('.nav-link').forEach(link => {
-    const text = link.textContent.trim();
-    Object.entries(textMap.navLinks).forEach(([ar, en]) => {
-      if (currentLang === 'ar' && text === en) link.textContent = ar;
-      else if (currentLang === 'en' && text === ar) link.textContent = en;
-    });
+    const t = (link.textContent || '').trim();
+    const nt = normalize(t);
+    let found = false;
+    for (const [ar, en] of Object.entries(textMap.navLinks)) {
+      if (normalize(ar) === nt || normalize(en) === nt) {
+        link.textContent = currentLang === 'ar' ? ar : en;
+        found = true;
+        break;
+      }
+    }
+    if (!found) { /* no-op */ }
   });
 
-  updateCustomSections();
+  if (typeof updateCustomSections === 'function') {
+    updateCustomSections();
+  }
 }
+
+document.addEventListener('DOMContentLoaded', applyLanguage);
 
 function updateCustomSections() {
   const lang = currentLang;
@@ -18223,7 +20053,6 @@ function updateCustomSections() {
   set('createUsernameLabel', 'اسم المستخدم', 'Username');
   set('createPasswordLabel', 'كلمة المرور', 'Password');
   set('createUserBtn', '💾 إنشاء', '💾 Create');
-
 }
 
 
